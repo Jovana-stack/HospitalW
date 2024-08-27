@@ -5,8 +5,7 @@ import {
   Space,
   Path,
   Coordinate,
-  Directions,
-  show3dMapGeojson,
+  
   Floor,
 } from "@mappedin/mappedin-js";
 import "@mappedin/mappedin-js/lib/index.css";
@@ -93,8 +92,7 @@ async function init() {
   let endSpace: Space | null = null;
   let path: Path | null = null;
   let accessibilityEnabled = false;
-  let selectingStart = true; //
-  let connectionPath: Path | null = null;
+
 
   mapData.getByType("space").forEach((space) => {
     mapView.updateState(space, {
