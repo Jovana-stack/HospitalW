@@ -1,0 +1,412 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+html,
+body {
+  width: 100%;
+  height: 100%;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+body {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+nav {
+  background-color: #ffffff;
+  color: rgb(15, 34, 64);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 60px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 0 1rem;
+  font-weight: bold;
+}
+.logo {
+  height: 40px;
+}
+.nav-links {
+  display: flex;
+  align-items: center;
+}
+.nav-links a {
+  color: rgb(15, 23, 47);
+  text-decoration: none;
+  margin: 0 1.5rem;
+  font-size: 1rem;
+  transition: color 0.3s, transform 0.3s;
+}
+.nav-links a:hover {
+  color: #ffcc00;
+  transform: scale(1.05);
+}
+#mappedin-map {
+  flex: 1;
+  width: 100%;
+  height: calc(100% - 120px); /* Adjust height to accommodate navbar and search container */
+  height: calc(100% - 120px); /* Adjust height to accommodate navbar and search container */
+  position: relative;
+}
+.search-container {
+  position: absolute;
+  top: 70px; /* Adjusted to be below the navbar */
+  left: 10px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.search-bar {
+  padding: 0.5rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 300px;
+}
+.search-results {
+  background-color: white;
+  border: 1px solid #ccc;
+  max-height: 200px;
+  overflow-y: auto;
+  width: 300px;
+  display: none;
+}
+.search-result-item {
+  padding: 5px;
+  cursor: pointer;
+}
+.search-result-item:hover {
+  background-color: #f0f0f0;
+}
+
+.settings-btn {
+  margin-left: 1.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+  background-color: rgb(15, 34, 64);
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+}
+
+.directions-btn {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+  background-color: rgb(15, 34, 64);
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+}
+
+.directions-btn:hover {
+  background-color: rgb(30, 59, 104);
+  transform: scale(1.05); 
+}
+
+.stop-nav-btn {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+  background-color: #d35400;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  transition: background-color 0.3s, transform 0.3s;
+}
+
+.stop-nav-btn:hover {
+  background-color: #e67e22; 
+  transform: scale(1.05); 
+}
+
+.modal {
+  display: none; /* Hidden by default */
+  position: fixed;
+  z-index: 1050;/* please do not change, this will keep the setting window on the top */
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.4);
+  padding-top: 20px;
+}
+.modal-content {
+  background-color: #fefefe;
+  margin: 10% auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 60%;
+  max-width:500px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3); /* Added box-shadow for better visibility */
+  position: relative;
+  z-index: 1060; /* Ensure content is above modal background */
+}
+.close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+.close:hover,
+.close:focus {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* Add the enableStackMap button style here: */
+.reset-button {
+  background-color: transparent;
+  border-width: 0;
+  font-family: inherit;
+  font-size: inherit;
+  font-style: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  padding: 0;
+}
+.mi-button {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  user-select: none;
+  pointer-events: all;
+  position: fixed; /* Use fixed to keep the button in the same place even when scrolling */
+  bottom: 70px; /* Distance from the bottom of the screen */
+  right: 20px; /* Distance from the right side of the screen */
+  height: 36px;
+  width: fit-content;
+  border-radius: 37.5px;
+  background: #0F2240;
+  color: #ffffff; /*set font color to white*/
+  box-shadow: 0 4px 0 0 var(--burnt-orange), 0 3px 8px 0 rgba(0, 0, 0, 0.3);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 7.5px;
+  z-index: 1000; /* Ensure the button stays on top of other elements */
+}
+
+.mi-button:hover:not(.mobile) {
+  filter: brightness(0.85);
+}
+
+.mi-button.pressed,
+.mi-button:active {
+  filter: brightness(0.8) !important;
+  box-shadow: 0 3px 8px 0 rgba(0, 0, 0, 0.3);
+}
+
+.mi-button > svg {
+  margin-right: 0;
+}
+
+.icons-container {
+  position: absolute;
+  top: 70px; 
+  left: 45%;
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  flex-direction: row;
+  gap: 10px;
+}
+
+.icons-container > button {
+  border-radius: 20px;
+  padding: 5px 10px;
+  border: 1px solid transparent;
+  outline: none;
+  cursor: pointer;
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+}
+
+.icons-container > button:hover {
+  border: 1px dotted #1d1d1d;
+}
+
+/* Testing the search-list-container style here:*/
+.search-list-container {
+  display: none;  /*set the default is not display, need to change to display in Typescript */
+  background-color: rgb(255, 255, 255);
+  border: 1px solid #ccc;
+  max-height: 200px;
+  overflow-y: auto;
+  width: 300px;
+
+  border-radius: 5px;
+  padding: 5px;   /* Ensure the content, including buttons, is 8px away from the edge */
+}
+
+/*style button for module and entrance button button 13:*/
+
+.button-13 {
+  background-color: #f1f2ff;
+  border: 1px solid #f1f2ff;
+  border-radius: 4px;
+  box-shadow:none; /*rgba(213, 217, 217, .5) 0 2px 5px 0;*/
+  box-sizing: border-box;
+  color: #464646;
+  cursor: pointer;
+  display: inline-block;
+  /*font-family: "Amazon Ember",sans-serif;*/
+  font-size: 14px;
+  line-height: 29px;
+  padding: 0 10px 0 11px;
+  position: relative;
+  text-align: left;
+  text-decoration: none;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  vertical-align: middle;
+  width: calc(100% - 10px);
+
+  margin: 4px;
+  
+}
+
+.button-13:hover {
+  background-color: #f7fafa;
+}
+
+.button-13:focus {
+  border-color: #008296;
+  box-shadow: rgba(213, 217, 217, .5) 0 2px 5px 0;
+  outline: 0;
+}
+
+/* Specific button style for #module-items-container */
+
+#module-items-container-endpoint button,
+#module-items-container button {
+  background-color: #f1f2ff; /* Same background color as .button-13 */
+  border: none; /* No border */
+  box-shadow: none; /* No shadow */
+  border-radius: 1px;
+  box-sizing: border-box;
+  color: #535353;
+  cursor: pointer;
+  display: inline-block;
+  font-size: 13px;
+  line-height: 29px;
+  padding: 0 10px 0 11px;
+  position: relative;
+  text-align: left;
+  text-decoration: none;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  vertical-align: middle;
+  width: calc(100% - 36px); /* Adjust width to fit within container with 10px space on left */
+
+  margin: 2px; /* No margin */
+  margin-left: 30px; /* 10px space on the left-hand side */
+  margin-right: 6px;
+}
+
+
+#module-items-container-endpoint button:hover,
+#module-items-container button:hover {
+  background-color: #f7fafa; /* Same hover effect as .button-13 */
+}
+
+
+#module-items-container-endpoint button:focus,
+#module-items-container button:focus {
+  border-color: #008296; /* Same focus effect as .button-13 */
+  box-shadow: rgba(213, 217, 217, .5) 0 2px 5px 0; /* Same focus effect as .button-13 */
+  outline: 0;
+}
+
+/* Specific button style for #entrance-items-container */
+#entrance-items-container-endpoint button,
+#entrance-items-container button {
+  background-color: #f1f2ff; /* Same background color as .button-13 */
+  border: none; /* No border */
+  box-shadow: none; /* No shadow */
+  border-radius: 1px;
+  box-sizing: border-box;
+  color: #535353;
+  cursor: pointer;
+  display: inline-block;
+  font-size: 13px;
+  line-height: 29px;
+  padding: 0 10px 0 11px;
+  position: relative;
+  text-align: left;
+  text-decoration: none;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  vertical-align: middle;
+  width: calc(100% - 36px); /* Adjust width to fit within container with 10px space on left */
+
+  margin: 2px; /* No margin */
+  margin-left: 30px; /* 10px space on the left-hand side */
+  margin-right: 6px;
+}
+
+#entrance-items-container-endpoint button:hover,
+#entrance-items-container button:hover {
+  background-color: #f7fafa; /* Same hover effect as .button-13 */
+}
+
+#entrance-items-container-endpoint button:focus,
+#entrance-items-container button:focus {
+  border-color: #008296; /* Same focus effect as .button-13 */
+  box-shadow: rgba(213, 217, 217, .5) 0 2px 5px 0; /* Same focus effect as .button-13 */
+  outline: 0;
+}
+
+
+/**/
+/* Specific button style for #reception-items-container */
+#reception-items-container-endpoint button,
+#reception-items-container button {
+  background-color: #f1f2ff; /* Same background color as .button-13 */
+  border: none; /* No border */
+  box-shadow: none; /* No shadow */
+  border-radius: 1px;
+  box-sizing: border-box;
+  color: #535353;
+  cursor: pointer;
+  display: inline-block;
+  font-size: 13px;
+  line-height: 29px;
+  padding: 0 10px 0 11px;
+  position: relative;
+  text-align: left;
+  text-decoration: none;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  vertical-align: middle;
+  width: calc(100% - 36px); /* Adjust width to fit within container with 10px space on left */
+
+  margin: 2px; /* No margin */
+  margin-left: 30px; /* 10px space on the left-hand side */
+  margin-right: 6px;
+}
+
+#reception-items-container-endpoint button:hover,
+#reception-items-container button:hover {
+  background-color: #f7fafa; /* Same hover effect as .button-13 */
+}
+
+#reception-items-container-endpoint button:focus,
+#reception-items-container button:focus {
+  border-color: #008296; /* Same focus effect as .button-13 */
+  box-shadow: rgba(213, 217, 217, .5) 0 2px 5px 0; /* Same focus effect as .button-13 */
+  outline: 0;
+}
+

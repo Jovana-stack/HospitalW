@@ -6,8 +6,11 @@ import { getMapData,
   Coordinate, 
   Floor } 
   from "@mappedin/mappedin-js";
+
+import QRCode from 'qrcode';
 import "@mappedin/mappedin-js/lib/index.css";
 import i18n from "./i18n";
+
 
 // See Trial API key Terms and Conditions
 // https://developer.mappedin.com/web/v6/trial-keys-and-maps/
@@ -15,7 +18,17 @@ const options = {
   key: "6666f9ba8de671000ba55c63",
   secret: "d15feef7e3c14bf6d03d76035aedfa36daae07606927190be3d4ea4816ad0e80",
   mapId: "66b179460dad9e000b5ee951",
+ // locationId:"s_06d6e892eadc2f05" ,
 };
+ // Map View names and ids obtained from the Mappedin Editor.
+ const mapViews = [
+  {
+    name: "Public Map",
+    id: "NHE9",
+  },
+  
+];
+
 
 async function init() {
   //set the language to English on initialization
@@ -145,8 +158,6 @@ async function init() {
     }
 });
 
-
-  
 
  // Mapping of floor IDs to their corresponding bearings and coordinates
  const floorSettings: { [key: string]: { bearing: number, coordinate: Coordinate } } = {
@@ -282,6 +293,26 @@ floorSelector.addEventListener("change", (e) => {
         floor.name !== "SuperClinic Level 1" &&
         floor.name !== "SuperClinic & Surgical Centre Ground Lvl"
     );
+
+    
+   
+
+    const qrImgEl = document.getElementById('qr') as HTMLImageElement;
+    
+    function generateQRCode(url: string, qrImgEl: HTMLImageElement) {
+        QRCode.toDataURL(url, { type: 'image/jpeg', margin: 1 }, (err: Error | null | undefined, dataUrl: string) => {
+            if (err) {
+                console.error("Failed to generate QR code:", err);
+            } else {
+                qrImgEl.src = dataUrl;
+            }
+        });
+    }
+    
+    const qrUrl2 = `https://hospital-w-w2q7.vercel.app
+`;
+    generateQRCode(qrUrl2, qrImgEl);
+    
 
   // The enable Button is used to enable and disable Stacked Maps.
   stackMapButton.onclick = () => {
@@ -671,6 +702,13 @@ accessibilityButton.addEventListener("click", () => {
       receptionButton.style.color = "#000";
     }
   });
+
+  
+
 }
+  
+
+  
+
 
 init();
