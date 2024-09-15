@@ -1,4 +1,4 @@
-import {
+import { 
   getMapData,
   show3dMap,
   MapView,
@@ -8,6 +8,7 @@ import {
   Coordinate,
   Floor,
 } from "@mappedin/mappedin-js";
+import QRCode from 'qrcode';
 import "@mappedin/mappedin-js/lib/index.css";
 import i18n from "./i18n";
 import { applySettings } from "./languageController";
@@ -15,38 +16,35 @@ import { modeSwitcher } from "./modeController";
 import { fontSizesSwitcher } from "./fontSizeController";
 import { languageSwitcher } from "./languageController";
 
-// See Trial API key Terms and Conditions
-// https://developer.mappedin.com/web/v6/trial-keys-and-maps/
 const options = {
   key: "6666f9ba8de671000ba55c63",
   secret: "d15feef7e3c14bf6d03d76035aedfa36daae07606927190be3d4ea4816ad0e80",
   mapId: "66b179460dad9e000b5ee951",
 };
-//testing mode feature
+
 let mapView: MapView;
 let mapData: MapData;
 let cachedSpaces: Space[];
 
+// Space ID for start space
+const predefinedStartSpaceId = "s_e121daad447b9e13";
+
 async function init() {
-  //set the language to English on initialization
   const language = i18n.language || "en";
   i18n.changeLanguage(language);
 
-  mapData = await getMapData(options); //testing for font size
-  cachedSpaces = mapData.getByType("space") as Space[]; // testing for font size
+  mapData = await getMapData(options);
+  cachedSpaces = mapData.getByType("space") as Space[];
 
   const mappedinDiv = document.getElementById("mappedin-map") as HTMLDivElement;
   const floorSelector = document.createElement("select");
-
-  // Add styles to the floor selector to position it
   floorSelector.style.position = "absolute";
-  floorSelector.style.top = "10px"; // Adjust as needed
-  floorSelector.style.right = "10px"; // Adjust as needed
-  floorSelector.style.zIndex = "1000"; // Ensure it is above other elements
+  floorSelector.style.top = "10px";
+  floorSelector.style.right = "10px";
+  floorSelector.style.zIndex = "1000";
 
   mappedinDiv.appendChild(floorSelector);
 
-  // Display the default map in the mappedin-map div
   mapView = await show3dMap(
     document.getElementById("mappedin-map") as HTMLDivElement,
     mapData,
@@ -58,11 +56,8 @@ async function init() {
   );
 
   modeSwitcher(mapView);
-
   fontSizesSwitcher(mapView, cachedSpaces);
   languageSwitcher(mapView, cachedSpaces);
-
-  // Initial labeling and translation
   applySettings(mapView, cachedSpaces);
 
   const applySettingsButton = document.getElementById("applySettings");
@@ -84,10 +79,9 @@ async function init() {
     const id = event?.floor.id;
     if (!id) return;
     floorSelector.value = id;
-    setCameraPosition(id); // Update the camera position when the floor changes
+    setCameraPosition(id);
   });
 
-  // Add each floor to the floor selector
   mapData.getByType("floor").forEach((floor) => {
     const option = document.createElement("option");
     option.text = floor.name;
@@ -107,8 +101,6 @@ async function init() {
     });
   });
 
-
-  // Define a navigation state object
   let navigationState = {
     startSpace: null as Space | null,
     endSpace: null as Space | null,
@@ -116,82 +108,99 @@ async function init() {
   };
 
   mapView.on("click", async (event) => {
-  if (!event) return;
+    if (!event) return;
 
-  const clickedSpace = event.spaces[0];
-  if (clickedSpace) {
-    // Check if the state of the space can be retrieved and then store the original color
-    const state = mapView.getState(clickedSpace);
-    const originalColor = state ? state.color : "#FFFFFF";
-    originalColors.set(clickedSpace.id, originalColor);
+    const clickedSpace = event.spaces[0];
+    if (clickedSpace) {
+      const state = mapView.getState(clickedSpace);
+      const originalColor = state ? state.color : "#FFFFFF";
+      originalColors.set(clickedSpace.id, originalColor);
 
-    mapView.updateState(clickedSpace, {
-      color: "#d4b2df",
+      mapView.updateState(clickedSpace, {
+        color: "#d4b2df",
+      });
+    }
+
+    if (!navigationState.startSpace) {
+      navigationState.startSpace = clickedSpace;
+      localStorage.setItem("startSpaceId", clickedSpace.id);
+      updateUrlWithStartSpace(navigationState.startSpace.id);
+    } else if (!navigationState.endSpace && clickedSpace !== navigationState.startSpace) {
+      navigationState.endSpace = clickedSpace;
+      localStorage.setItem("endSpaceId", clickedSpace.id);
+      updateUrlWithSelectedSpaces(navigationState.startSpace.id, navigationState.endSpace.id);
+
+      if (navigationState.startSpace && navigationState.endSpace) {
+        if (navigationState.isPathDrawn) {
+          mapView.Paths.removeAll();
+          mapView.Markers.removeAll();
+          setSpaceInteractivity(true);
+          navigationState.isPathDrawn = false;
+        }
+
+        const sameFloor =
+          navigationState.startSpace.floor === navigationState.endSpace.floor;
+
+        const directionsOptions =
+          accessibilityEnabled || sameFloor ? { accessible: true } : {};
+
+        const directions = await mapView.getDirections(
+          navigationState.startSpace,
+          navigationState.endSpace,
+          directionsOptions
+        );
+
+        if (directions) {
+          mapView.Navigation.draw(directions, {
+            pathOptions: {
+              nearRadius: 0.5,
+              farRadius: 0.5,
+            },
+          });
+          navigationState.isPathDrawn = true;
+          setSpaceInteractivity(false);
+        }
+      }
+    }
+  });
+
+  function updateUrlWithStartSpace(startSpaceId: string): void {
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set("startSpace", startSpaceId);
+    window.history.pushState({}, '', currentUrl.toString());
+  }
+
+  const qrImgEl = document.getElementById("qr") as HTMLImageElement;
+  if (!qrImgEl) {
+    console.error("QR code image element not found");
+    return;
+  }
+
+  const qrUrl2 = `https://hospital-w.vercel.app/?startSpace=${predefinedStartSpaceId}`;
+  generateQRCode(qrUrl2, qrImgEl);
+
+  function generateQRCode(url: string, qrImgEl: HTMLImageElement) {
+    QRCode.toDataURL(url, { type: 'image/jpeg', margin: 1 }, (err, dataUrl) => {
+      if (err) {
+        console.error("Failed to generate QR code:", err);
+      } else {
+        qrImgEl.src = dataUrl;
+      }
     });
   }
 
-  // Check if it's the first click for the start space
-  if (!navigationState.startSpace) {
-    navigationState.startSpace = clickedSpace;
-    localStorage.setItem("startSpaceId", clickedSpace.id); // Store start space in local storage
-
-    // Update the URL with only the start space ID
-    updateUrlWithStartSpace(navigationState.startSpace.id);
-  } 
-  // Check if it's the second click for the end space
-  else if (!navigationState.endSpace && clickedSpace !== navigationState.startSpace) {
-    navigationState.endSpace = clickedSpace;
-    localStorage.setItem("endSpaceId", clickedSpace.id); // Store end space in local storage
-
-    // Update the URL with both start and end spaces
-    updateUrlWithSelectedSpaces(navigationState.startSpace.id, navigationState.endSpace.id);
-
-    // Check and draw path if both start and end are set
-    if (navigationState.startSpace && navigationState.endSpace) {
-      // Clear any previous paths if any
-      if (navigationState.isPathDrawn) {
-        mapView.Paths.removeAll();
-        mapView.Markers.removeAll();
-        setSpaceInteractivity(true); // Make spaces interactive again
-        navigationState.isPathDrawn = false;
-      }
-
-      // Check if start and end spaces are on the same floor
-      const sameFloor =
-        navigationState.startSpace.floor === navigationState.endSpace.floor;
-
-      // Force accessibility if on the same floor to avoid stairs
-      const directionsOptions =
-        accessibilityEnabled || sameFloor ? { accessible: true } : {};
-
-      // Draw the path
-      const directions = await mapView.getDirections(
-        navigationState.startSpace,
-        navigationState.endSpace,
-        directionsOptions
-      );
-
-      if (directions) {
-        mapView.Navigation.draw(directions, {
-          pathOptions: {
-            nearRadius: 0.5,
-            farRadius: 0.5,
-          },
-        });
-        navigationState.isPathDrawn = true; // Set flag indicating that a path is currently drawn
-        setSpaceInteractivity(false); // Disable interactivity while path is drawn
-      }
+  // Check URL parameters on initialization
+  const urlParams = new URLSearchParams(window.location.search);
+  const startSpaceIdFromUrl = urlParams.get("startSpace");
+  if (startSpaceIdFromUrl) {
+    const space = cachedSpaces.find(space => space.id === startSpaceIdFromUrl);
+    if (space) {
+      navigationState.startSpace = space;
+      localStorage.setItem("startSpaceId", startSpaceIdFromUrl);
+      mapView.updateState(space, { color: "#d4b2df" });
     }
   }
-});
-
-// Function to update the URL with just the start space
-function updateUrlWithStartSpace(startSpaceId: string): void {
-  const currentUrl = new URL(window.location.href);
-  currentUrl.searchParams.set("startSpace", startSpaceId);
-  window.history.pushState({}, '', currentUrl.toString()); // Update URL without reloading
-}
-
+  
 // Function to update the URL with both start and end spaces
 function updateUrlWithSelectedSpaces(startSpaceId: string, endSpaceId: string): void {
   const currentUrl = new URL(window.location.href);
