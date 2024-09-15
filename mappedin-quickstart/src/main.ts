@@ -107,6 +107,7 @@ async function init() {
     });
   });
 
+
   // Define a navigation state object
   let navigationState = {
     startSpace: null as Space | null,
@@ -115,72 +116,89 @@ async function init() {
   };
 
   mapView.on("click", async (event) => {
-    if (!event) return;
+  if (!event) return;
 
-    const clickedSpace = event.spaces[0];
-    if (clickedSpace) {
-      // Check if the state of the space can be retrieved and then store the original color
+  const clickedSpace = event.spaces[0];
+  if (clickedSpace) {
+    // Check if the state of the space can be retrieved and then store the original color
+    const state = mapView.getState(clickedSpace);
+    const originalColor = state ? state.color : "#FFFFFF";
+    originalColors.set(clickedSpace.id, originalColor);
 
-      const state = mapView.getState(clickedSpace);
-      const originalColor = state ? state.color : "#FFFFFF";
+    mapView.updateState(clickedSpace, {
+      color: "#d4b2df",
+    });
+  }
 
-      originalColors.set(clickedSpace.id, originalColor);
+  // Check if it's the first click for the start space
+  if (!navigationState.startSpace) {
+    navigationState.startSpace = clickedSpace;
+    localStorage.setItem("startSpaceId", clickedSpace.id); // Store start space in local storage
 
-      mapView.updateState(clickedSpace, {
-        color: "#d4b2df",
-      });
-    }
+    // Update the URL with only the start space ID
+    updateUrlWithStartSpace(navigationState.startSpace.id);
+  } 
+  // Check if it's the second click for the end space
+  else if (!navigationState.endSpace && clickedSpace !== navigationState.startSpace) {
+    navigationState.endSpace = clickedSpace;
+    localStorage.setItem("endSpaceId", clickedSpace.id); // Store end space in local storage
 
-    // Check if it's the first click for the start space
-    if (!navigationState.startSpace) {
-      navigationState.startSpace = event.spaces[0];
-    }
-    // Check if it's the second click for the end space
-    else if (
-      !navigationState.endSpace &&
-      event.spaces[0] !== navigationState.startSpace
-    ) {
-      navigationState.endSpace = event.spaces[0];
+    // Update the URL with both start and end spaces
+    updateUrlWithSelectedSpaces(navigationState.startSpace.id, navigationState.endSpace.id);
 
-      // Check and draw path if both start and end are set
-      if (navigationState.startSpace && navigationState.endSpace) {
-        // Clear any previous paths if any
-        if (navigationState.isPathDrawn) {
-          mapView.Paths.removeAll();
-          mapView.Markers.removeAll();
-          setSpaceInteractivity(true); // Make spaces interactive again
-          navigationState.isPathDrawn = false;
-        }
+    // Check and draw path if both start and end are set
+    if (navigationState.startSpace && navigationState.endSpace) {
+      // Clear any previous paths if any
+      if (navigationState.isPathDrawn) {
+        mapView.Paths.removeAll();
+        mapView.Markers.removeAll();
+        setSpaceInteractivity(true); // Make spaces interactive again
+        navigationState.isPathDrawn = false;
+      }
 
-        // Check if start and end spaces are on the same floor
-        const sameFloor =
-          navigationState.startSpace.floor === navigationState.endSpace.floor;
+      // Check if start and end spaces are on the same floor
+      const sameFloor =
+        navigationState.startSpace.floor === navigationState.endSpace.floor;
 
-        // Force accessibility if on the same floor to avoid stairs
-        const directionsOptions =
-          accessibilityEnabled || sameFloor ? { accessible: true } : {};
+      // Force accessibility if on the same floor to avoid stairs
+      const directionsOptions =
+        accessibilityEnabled || sameFloor ? { accessible: true } : {};
 
-        // Draw the path
-        const directions = await mapView.getDirections(
-          navigationState.startSpace,
-          navigationState.endSpace,
-          directionsOptions
-        );
+      // Draw the path
+      const directions = await mapView.getDirections(
+        navigationState.startSpace,
+        navigationState.endSpace,
+        directionsOptions
+      );
 
-        if (directions) {
-          mapView.Navigation.draw(directions, {
-            pathOptions: {
-              nearRadius: 0.5,
-              farRadius: 0.5,
-            },
-          });
-          navigationState.isPathDrawn = true; // Set flag indicating that a path is currently drawn
-          setSpaceInteractivity(false); // Disable interactivity while path is drawn
-        }
+      if (directions) {
+        mapView.Navigation.draw(directions, {
+          pathOptions: {
+            nearRadius: 0.5,
+            farRadius: 0.5,
+          },
+        });
+        navigationState.isPathDrawn = true; // Set flag indicating that a path is currently drawn
+        setSpaceInteractivity(false); // Disable interactivity while path is drawn
       }
     }
-  });
+  }
+});
 
+// Function to update the URL with just the start space
+function updateUrlWithStartSpace(startSpaceId: string): void {
+  const currentUrl = new URL(window.location.href);
+  currentUrl.searchParams.set("startSpace", startSpaceId);
+  window.history.pushState({}, '', currentUrl.toString()); // Update URL without reloading
+}
+
+// Function to update the URL with both start and end spaces
+function updateUrlWithSelectedSpaces(startSpaceId: string, endSpaceId: string): void {
+  const currentUrl = new URL(window.location.href);
+  currentUrl.searchParams.set("startSpace", startSpaceId);
+  currentUrl.searchParams.set("endSpace", endSpaceId);
+  window.history.pushState({}, '', currentUrl.toString()); // Update URL without reloading
+}
   function setSpaceInteractivity(isInteractive: boolean): void {
     mapData.getByType("space").forEach((space) => {
       mapView.updateState(space, {
