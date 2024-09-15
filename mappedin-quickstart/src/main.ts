@@ -6,6 +6,8 @@ import {
   MapData,
   Path,
   Coordinate,
+  Directions,
+  show3dMapGeojson,
   Floor,
 } from "@mappedin/mappedin-js";
 import "@mappedin/mappedin-js/lib/index.css";
@@ -99,7 +101,7 @@ async function init() {
   let endSpace: Space | null = null;
   let path: Path | null = null;
   let accessibilityEnabled = false;
-  
+  let selectingStart = true; //
 
   mapData.getByType("space").forEach((space) => {
     mapView.updateState(space, {
@@ -413,91 +415,130 @@ async function init() {
       mapView.Labels.add(poi.coordinate, poi.name);
     }
   }
-
-  // Search bar functionality
-  const endSearchBar = document.getElementById(
-    "end-search"
-  ) as HTMLInputElement;
-  const startSearchBar = document.getElementById(
-    "start-search"
-  ) as HTMLInputElement;
-  const endResultsContainer = document.getElementById(
-    "end-results"
-  ) as HTMLDivElement;
-  const startResultsContainer = document.getElementById(
-    "start-results"
-  ) as HTMLDivElement;
-
-  endSearchBar.addEventListener("input", function () {
+  // Function to generate the dynamic Vercel URL
+  function generateVercelUrl(startPoint: string): string {
+    const vercelBaseUrl = 'https://hospital-w-w2q7.vercel.app/';
+    const params = new URLSearchParams();
+  
+    // Set the 'start' parameter to the start point
+    params.set('start', startPoint);
+  
+    // Construct the final Vercel URL with parameters
+    const vercelUrl = `${vercelBaseUrl}?${params.toString()}`;
+  
+    return vercelUrl;
+  }
+  
+  function generateQRCode(url: string, qrImgEl: HTMLImageElement): void {
+    const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(url)}`;
+  
+    fetch(apiUrl)
+        .then(response => response.blob())
+        .then(blob => {
+            const qrUrl = URL.createObjectURL(blob);
+            qrImgEl.src = qrUrl;
+        })
+        .catch(error => console.error('Error generating QR code:', error));
+  }
+  
+  // Define the start point
+  const startPoint = 'Reception';
+  const vercelUrl = generateVercelUrl(startPoint);
+  
+  // Find the QR image element in the DOM
+  const qrImgEl = document.getElementById('qr') as HTMLImageElement;
+  if (qrImgEl) {
+    generateQRCode(vercelUrl, qrImgEl);
+  }
+    // Function to handle URL parameters
+  function handleUrlParams(): void {
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchQuery = urlParams.get('search');
+    const startSpace = urlParams.get('startSpace');
+  
+    if (searchQuery) {
+        const searchInput = document.getElementById('start-search') as HTMLInputElement;
+        if (searchInput) {
+            searchInput.value = searchQuery;
+            searchInput.dispatchEvent(new Event('input'));
+        }
+    }
+  
+    if (startSpace) {
+        const startSearchBar = document.getElementById('start-search') as HTMLInputElement;
+        if (startSearchBar) {
+            startSearchBar.value = startSpace;
+            startSearchBar.dispatchEvent(new Event('input'));
+        }
+    }
+  }
+  
+  document.addEventListener('DOMContentLoaded', handleUrlParams);
+  
+  const endSearchBar = document.getElementById('end-search') as HTMLInputElement;
+  const startSearchBar = document.getElementById('start-search') as HTMLInputElement;
+  const endResultsContainer = document.getElementById('end-results') as HTMLDivElement;
+  const startResultsContainer = document.getElementById('start-results') as HTMLDivElement;
+  
+  endSearchBar.addEventListener('input', function () {
     const query = endSearchBar.value.toLowerCase();
     if (query) {
-      performSearch(query, "end");
-      endResultsContainer.style.display = "block";
+        performSearch(query, 'end');
+        endResultsContainer.style.display = 'block';
     } else {
-      endResultsContainer.style.display = "none";
+        endResultsContainer.style.display = 'none';
     }
   });
-
-  startSearchBar.addEventListener("input", function () {
+  
+  startSearchBar.addEventListener('input', function () {
     const query = startSearchBar.value.toLowerCase();
     if (query) {
-      performSearch(query, "start");
-      startResultsContainer.style.display = "block";
+        performSearch(query, 'start');
+        startResultsContainer.style.display = 'block';
     } else {
-      startResultsContainer.style.display = "none";
-      //try to testing the start point set as null by default when there is no query
-      //startSpace = null;
+        startResultsContainer.style.display = 'none';
     }
   });
-
-  document.addEventListener("click", function (event) {
-    if (!(event.target as HTMLElement).closest(".search-container")) {
-      endResultsContainer.style.display = "none";
-      startResultsContainer.style.display = "none";
+  
+  document.addEventListener('click', function (event) {
+    if (!(event.target as HTMLElement).closest('.search-container')) {
+        endResultsContainer.style.display = 'none';
+        startResultsContainer.style.display = 'none';
     }
   });
-
-  function performSearch(query: string, type: "start" | "end") {
-    //const spaces: Space[] = mapData.getByType("space");//testing for font size
-    const results: Space[] = cachedSpaces.filter((space) =>
-      space.name.toLowerCase().includes(query)
+  
+  function performSearch(query: string, type: 'start' | 'end'): void {
+    const spaces: Space[] = mapData.getByType('space');
+    const results: Space[] = spaces.filter((space) =>
+        space.name.toLowerCase().includes(query)
     );
     displayResults(results, type);
   }
-
-  function displayResults(results: Space[], type: "start" | "end") {
-    const resultsContainer =
-      type === "end" ? endResultsContainer : startResultsContainer;
-    resultsContainer.innerHTML = "";
+  
+  function displayResults(results: Space[], type: 'start' | 'end'): void {
+    const resultsContainer = type === 'start' ? startResultsContainer : endResultsContainer;
+    resultsContainer.innerHTML = '';
     results.forEach((result: Space) => {
-      const resultItem = document.createElement("div");
-      resultItem.className = "search-result-item";
-      resultItem.textContent = result.name;
-      resultItem.style.padding = "5px";
-      resultItem.style.cursor = "pointer";
-      resultItem.addEventListener("mouseover", function () {
-        mapView.updateState(result, {
-          hoverColor: "hover", // Simulate hover by setting the state
+        const resultItem = document.createElement('div');
+        resultItem.className = 'search-result-item';
+        resultItem.textContent = result.name;
+        resultItem.style.padding = '5px';
+        resultItem.style.cursor = 'pointer';
+        resultItem.addEventListener('click', function () {
+            if (type === 'start') {
+                startSpace = result;
+                startSearchBar.value = result.name;
+                startResultsContainer.style.display = 'none';
+            } else {
+                endSpace = result;
+                endSearchBar.value = result.name;
+                endResultsContainer.style.display = 'none';
+            }
         });
-      });
-      resultItem.addEventListener("mouseleave", function () {
-        mapView.updateState(result, {
-          hoverColor: "default", // Revert to default state
-        });
-      });
-      resultItem.addEventListener("click", function () {
-        if (type === "end") {
-          endSpace = result;
-          endSearchBar.value = result.name;
-        } else {
-          startSpace = result;
-          startSearchBar.value = result.name;
-        }
-        resultsContainer.style.display = "none"; // Hide results when a space is selected
-      });
-      resultsContainer.appendChild(resultItem);
+        resultsContainer.appendChild(resultItem);
     });
   }
+  
 
   // Stop Navigation Button
   const stopNavigationButton = document.getElementById(
