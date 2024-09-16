@@ -2,7 +2,8 @@
 <html>
   <head>
     <title>Wayfinder</title>
-    <meta charset="UTF-8" />
+    <meta name="viewport"
+    content = "width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="./src/style.css" />
   </head>
 
@@ -191,8 +192,14 @@
       </div>
     </div>
     <div id="ui">
-      <img id="qr" alt="QR Code" />
-    </div>
+      <style>
+        #qr {
+          display: none;
+        }
+      </style>
+    <img id="qr" alt="QR Code" />
+    </div>  
+
     <script type="module" src="src/main.ts"></script>
     <script type="module" src="src/languageController.ts"></script>
     <script type="module">

@@ -99,7 +99,7 @@ nav {
     width: 100%; /* Full width of the search input and buttons */
     max-width: 100%; /* Ensure it stays within the container */
   }
-
+  
   .icons-container {
     position: absolute; /* Remove absolute positioning */
     margin-top: 5px; /* Add some space below the search container */

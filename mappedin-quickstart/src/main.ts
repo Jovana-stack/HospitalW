@@ -27,7 +27,7 @@ let mapData: MapData;
 let cachedSpaces: Space[];
 
 // Space ID for start space
-const predefinedStartSpaceId = "s_e121daad447b9e13";
+const predefinedStartSpaceId = null; // Ensures no default start space is selected
 
 async function init() {
   const language = i18n.language || "en";
@@ -35,6 +35,9 @@ async function init() {
 
   mapData = await getMapData(options);
   cachedSpaces = mapData.getByType("space") as Space[];
+
+  // Log cached spaces to verify
+  console.log("Cached spaces:", cachedSpaces);
 
   const mappedinDiv = document.getElementById("mappedin-map") as HTMLDivElement;
   const floorSelector = document.createElement("select");
@@ -125,6 +128,7 @@ async function init() {
       navigationState.startSpace = clickedSpace;
       localStorage.setItem("startSpaceId", clickedSpace.id);
       updateUrlWithStartSpace(navigationState.startSpace.id);
+      console.log("Start space set:", navigationState.startSpace.id);
     } else if (!navigationState.endSpace && clickedSpace !== navigationState.startSpace) {
       navigationState.endSpace = clickedSpace;
       localStorage.setItem("endSpaceId", clickedSpace.id);
@@ -176,7 +180,10 @@ async function init() {
     return;
   }
 
-  const qrUrl2 = `https://hospital-w.vercel.app/?startSpace=${predefinedStartSpaceId}`;
+  const qrUrl2 = predefinedStartSpaceId 
+      ? `https://hospital-w.vercel.app/?startSpace=${predefinedStartSpaceId}`
+      : `https://hospital-w.vercel.app/`;
+
   generateQRCode(qrUrl2, qrImgEl);
 
   function generateQRCode(url: string, qrImgEl: HTMLImageElement) {
@@ -187,11 +194,12 @@ async function init() {
         qrImgEl.src = dataUrl;
       }
     });
-  }
+  } 
 
-  // Check URL parameters on initialization
   const urlParams = new URLSearchParams(window.location.search);
   const startSpaceIdFromUrl = urlParams.get("startSpace");
+  const endSpaceIdFromUrl = urlParams.get("endSpace");
+
   if (startSpaceIdFromUrl) {
     const space = cachedSpaces.find(space => space.id === startSpaceIdFromUrl);
     if (space) {
@@ -200,14 +208,23 @@ async function init() {
       mapView.updateState(space, { color: "#d4b2df" });
     }
   }
-  
-// Function to update the URL with both start and end spaces
-function updateUrlWithSelectedSpaces(startSpaceId: string, endSpaceId: string): void {
-  const currentUrl = new URL(window.location.href);
-  currentUrl.searchParams.set("startSpace", startSpaceId);
-  currentUrl.searchParams.set("endSpace", endSpaceId);
-  window.history.pushState({}, '', currentUrl.toString()); // Update URL without reloading
-}
+
+  if (endSpaceIdFromUrl) {
+    const endSpace = cachedSpaces.find(space => space.id === endSpaceIdFromUrl);
+    if (endSpace) {
+      navigationState.endSpace = endSpace;
+      // Optionally, handle the end space if needed
+    }
+  }
+
+  // Function to update the URL with both start and end spaces
+  function updateUrlWithSelectedSpaces(startSpaceId: string, endSpaceId: string): void {
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set("startSpace", startSpaceId);
+    currentUrl.searchParams.set("endSpace", endSpaceId);
+    window.history.pushState({}, '', currentUrl.toString()); // Update URL without reloading
+  }
+
   function setSpaceInteractivity(isInteractive: boolean): void {
     mapData.getByType("space").forEach((space) => {
       mapView.updateState(space, {
