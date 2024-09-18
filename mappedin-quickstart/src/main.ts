@@ -9,6 +9,7 @@ import {
   Floor,
 } from "@mappedin/mappedin-js";
 import QRCode from 'qrcode';
+import { handleQRCodeScan, setCachedSpaces } from './qrCodeHandler';
 import "@mappedin/mappedin-js/lib/index.css";
 import i18n from "./i18n";
 import { applySettings } from "./languageController";
@@ -199,6 +200,21 @@ async function init() {
     window.history.pushState({}, '', currentUrl.toString());
   }
 
+  function updateSearchBarWithStartSpace(spaceId: string): void {
+    // Find the space from the cached spaces
+    const space = cachedSpaces.find(space => space.id === spaceId);
+    
+    if (space) {
+      // Update the search bar with the name of the start space
+      const startSearchInput = document.getElementById("start-search") as HTMLInputElement | null;
+      if (startSearchInput) {
+        startSearchInput.value = space.name || '';
+      }
+    } else {
+      console.error("Space ID not found in cached spaces.");
+    }
+  }
+  
   const qrImgEl = document.getElementById("qr") as HTMLImageElement;
   if (!qrImgEl) {
     console.error("QR code image element not found");
@@ -235,6 +251,7 @@ async function init() {
       localStorage.setItem("startSpaceId", startSpaceIdFromUrl);
       mapView.updateState(space, { color: "#d4b2df" });
       console.log("Start space set from URL:", startSpaceIdFromUrl);
+      updateSearchBarWithStartSpace(startSpaceIdFromUrl);
     } else {
       console.error("Start space ID from URL not found in cached spaces.");
     }
@@ -252,6 +269,7 @@ async function init() {
     }
   }
 
+  handleQRCodeScan(); 
   // Function to update the URL with both start and end spaces
   function updateUrlWithSelectedSpaces(startSpaceId: string, endSpaceId: string): void {
     const currentUrl = new URL(window.location.href);
