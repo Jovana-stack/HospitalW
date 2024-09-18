@@ -123,28 +123,43 @@ async function init() {
 
   mapView.on("click", async (event) => {
     if (!event) return;
-
+  
     const clickedSpace = event.spaces[0];
     if (clickedSpace) {
       const state = mapView.getState(clickedSpace);
       const originalColor = state ? state.color : "#FFFFFF";
       originalColors.set(clickedSpace.id, originalColor);
-
+  
       mapView.updateState(clickedSpace, {
         color: "#d4b2df",
       });
     }
-
+  
+    const clickedSpaceName = clickedSpace ? clickedSpace.name : "";
+  
+    const startSearchInput = document.getElementById("start-search") as HTMLInputElement | null;
+    const endSearchInput = document.getElementById("end-search") as HTMLInputElement | null;
+  
     if (!navigationState.startSpace) {
       navigationState.startSpace = clickedSpace;
       localStorage.setItem("startSpaceId", clickedSpace.id);
+  
+      if (startSearchInput) {
+        startSearchInput.value = clickedSpaceName;
+      }
+  
       updateUrlWithStartSpace(navigationState.startSpace.id);
       console.log("Start space set:", navigationState.startSpace.id);
     } else if (!navigationState.endSpace && clickedSpace !== navigationState.startSpace) {
       navigationState.endSpace = clickedSpace;
       localStorage.setItem("endSpaceId", clickedSpace.id);
+  
+      if (endSearchInput) {
+        endSearchInput.value = clickedSpaceName;
+      }
+  
       updateUrlWithSelectedSpaces(navigationState.startSpace.id, navigationState.endSpace.id);
-
+  
       if (navigationState.startSpace && navigationState.endSpace) {
         if (navigationState.isPathDrawn) {
           mapView.Paths.removeAll();
@@ -152,19 +167,17 @@ async function init() {
           setSpaceInteractivity(true);
           navigationState.isPathDrawn = false;
         }
-
-        const sameFloor =
-          navigationState.startSpace.floor === navigationState.endSpace.floor;
-
-        const directionsOptions =
-          accessibilityEnabled || sameFloor ? { accessible: true } : {};
-
+  
+        const sameFloor = navigationState.startSpace.floor === navigationState.endSpace.floor;
+  
+        const directionsOptions = accessibilityEnabled || sameFloor ? { accessible: true } : {};
+  
         const directions = await mapView.getDirections(
           navigationState.startSpace,
           navigationState.endSpace,
           directionsOptions
         );
-
+  
         if (directions) {
           mapView.Navigation.draw(directions, {
             pathOptions: {
@@ -178,6 +191,7 @@ async function init() {
       }
     }
   });
+  
 
   function updateUrlWithStartSpace(startSpaceId: string): void {
     const currentUrl = new URL(window.location.href);
@@ -245,6 +259,42 @@ async function init() {
     currentUrl.searchParams.set("endSpace", endSpaceId);
     window.history.pushState({}, '', currentUrl.toString()); // Update URL without reloading
   }
+  document.getElementById('stop-navigation')?.addEventListener('click', () => {
+    // Clear local storage
+    localStorage.removeItem('startSpaceId');
+    localStorage.removeItem('endSpaceId');
+    
+    // Verify removal
+    console.log('Local storage items:', {
+      startSpaceId: localStorage.getItem('startSpace'),
+      endSpaceId: localStorage.getItem('endSpace')
+    });
+    
+    // Update URL
+    const url = new URL(window.location.href);
+    url.searchParams.delete("startSpace");
+    url.searchParams.delete("endSpace");
+    window.history.replaceState({}, document.title, url.toString());
+    
+    // Reset the search bar
+    const startSearchInput = document.getElementById('start-search') as HTMLInputElement;
+    if (startSearchInput) {
+      startSearchInput.value = '';  // Clear the input value
+    }
+  
+    // Reset the navigation state
+    navigationState.startSpace = null;
+    navigationState.endSpace = null;
+    navigationState.isPathDrawn = false;
+    
+    // Clear paths and markers if needed
+    mapView.Paths.removeAll();
+    mapView.Markers.removeAll();
+    setSpaceInteractivity(true);
+    
+    console.log("Navigation stopped and URL cleared.");
+  });
+  
 
   function setSpaceInteractivity(isInteractive: boolean): void {
     mapData.getByType("space").forEach((space) => {
@@ -499,7 +549,7 @@ async function init() {
             farRadius: 0.5,
             color: "red",
           });
-        //emergencyButton.textContent = "Emergency Off";
+        //  emergencyButton.textContent = "Emergency Off";
           emergencyButton.style.backgroundColor = "#28a745";
           emergencyExitOn = true;
         }
