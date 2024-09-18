@@ -9,7 +9,7 @@ import {
   Floor,
 } from "@mappedin/mappedin-js";
 import QRCode from 'qrcode';
-import { handleQRCodeScan, setCachedSpaces } from './qrCodeHandler';
+import { handleQRCodeScan} from './qrCodeHandler';
 import "@mappedin/mappedin-js/lib/index.css";
 import i18n from "./i18n";
 import { applySettings } from "./languageController";
