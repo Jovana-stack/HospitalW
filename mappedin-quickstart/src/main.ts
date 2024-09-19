@@ -18,6 +18,8 @@ import { fontSizesSwitcher } from "./fontSizeController";
 import { languageSwitcher } from "./languageController";
 import { updateButtonText } from './buttonTextUpdater';  //update the Get Direction and Stop Nav button according to screen size
 import './script';
+import { initializeButtonListeners } from "./poiButtonController";
+
 
 const options = {
   key: "6666f9ba8de671000ba55c63",
@@ -72,6 +74,7 @@ async function init() {
   fontSizesSwitcher(mapView, cachedSpaces);
   languageSwitcher(mapView, cachedSpaces);
   applySettings(mapView, cachedSpaces);
+  initializeButtonListeners();
 
   const applySettingsButton = document.getElementById("applySettings");
   if (applySettingsButton) {
@@ -391,7 +394,9 @@ async function init() {
   const dropMenuContainer = document.querySelector(".drop-menu.dropup");
 
   // 3. Find the settings button
-  const settingsButton = document.querySelector(".drop-menu.dropup .settings-btn");
+  const settingsButton = document.querySelector(
+    ".drop-menu.dropup .settings-btn"
+  );
 
   // 4. Append the stackMapButton to the container
   if (dropMenuContainer) {
