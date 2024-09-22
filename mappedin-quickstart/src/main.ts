@@ -1,4 +1,4 @@
-import {
+import { 
   getMapData,
   show3dMap,
   MapView,
@@ -8,45 +8,61 @@ import {
   Coordinate,
   Floor,
 } from "@mappedin/mappedin-js";
+import QRCode from 'qrcode';
 import "@mappedin/mappedin-js/lib/index.css";
 import i18n from "./i18n";
+import { handleQRCodeScan} from './qrCodeHandler';
 import { applySettings } from "./languageController";
 import { modeSwitcher } from "./modeController";
 import { fontSizesSwitcher } from "./fontSizeController";
 import { languageSwitcher } from "./languageController";
+import { updateButtonText } from './buttonTextUpdater';  //update the Get Direction and Stop Nav button according to screen size
+import { initializeButtonListeners } from "./poiButtonController";
+import { RealTimeLocationTracker } from "./locationTracker";
 
-// See Trial API key Terms and Conditions
-// https://developer.mappedin.com/web/v6/trial-keys-and-maps/
+import './script';
+
 const options = {
   key: "6666f9ba8de671000ba55c63",
   secret: "d15feef7e3c14bf6d03d76035aedfa36daae07606927190be3d4ea4816ad0e80",
   mapId: "66b179460dad9e000b5ee951",
 };
-//testing mode feature
+
 let mapView: MapView;
 let mapData: MapData;
 let cachedSpaces: Space[];
+let locationTracker: RealTimeLocationTracker | null = null;
+
+
+// Space ID for start space
+const predefinedStartSpaceId = null; // Ensures no default start space is selected
 
 async function init() {
-  //set the language to English on initialization
   const language = i18n.language || "en";
   i18n.changeLanguage(language);
 
-  mapData = await getMapData(options); //testing for font size
-  cachedSpaces = mapData.getByType("space") as Space[]; // testing for font size
+  mapData = await getMapData(options);
+  cachedSpaces = mapData.getByType("space") as Space[];
+
+  // Log cached spaces to verify
+  console.log("Cached spaces:", cachedSpaces);
 
   const mappedinDiv = document.getElementById("mappedin-map") as HTMLDivElement;
   const floorSelector = document.createElement("select");
 
+  //makine other stylish floorSelector:
+  //const floorSelectorNew = document.getElementById("floor-selector-new") as HTMLDivElement;
+  //floorSelectorNew.value = mapView.currentFloor.id;
+
   // Add styles to the floor selector to position it
-  floorSelector.style.position = "absolute";
-  floorSelector.style.top = "10px"; // Adjust as needed
-  floorSelector.style.right = "10px"; // Adjust as needed
-  floorSelector.style.zIndex = "1000"; // Ensure it is above other elements
+  floorSelector.id = "floor-selector2";
+  //floorSelector.style.position = "absolute";
+  //floorSelector.style.top = "10px"; // Adjust as needed
+  //floorSelector.style.right = "10px"; // Adjust as needed
+  //floorSelector.style.zIndex = "1000"; // Ensure it is above other elements
 
   mappedinDiv.appendChild(floorSelector);
 
-  // Display the default map in the mappedin-map div
   mapView = await show3dMap(
     document.getElementById("mappedin-map") as HTMLDivElement,
     mapData,
@@ -56,14 +72,50 @@ async function init() {
       },
     }
   );
+  // Initialize mappedin maps and start tracking
+  locationTracker = await RealTimeLocationTracker.getLocationTracker(mapView);
 
   modeSwitcher(mapView);
-
   fontSizesSwitcher(mapView, cachedSpaces);
   languageSwitcher(mapView, cachedSpaces);
-
+  initializeButtonListeners();
   // Initial labeling and translation
   applySettings(mapView, cachedSpaces);
+
+  // get toggle button element for real-time tracking
+  const locationToggle = document.getElementById(
+    "location-toggle"
+  ) as HTMLInputElement;
+
+  let isTrackingEnabled = false;
+
+  // event listener for enabling/disabling real-time tracking
+  locationToggle.addEventListener("click", function () {
+    if (locationTracker) {
+      isTrackingEnabled = !isTrackingEnabled;
+      console.log(
+        "Location toggle clicked, tracking enabled:",
+        isTrackingEnabled
+      );
+      if (isTrackingEnabled) {
+        locationTracker.startTracking(); // Start real-time tracking
+        locationToggle.classList.remove("off");
+      } else {
+        locationTracker.stopTracking(); // Stop real-time tracking
+        locationToggle.classList.add("off");
+      }
+    }
+
+    // Optionally update the button appearance when toggling
+    const imgElement = locationToggle.querySelector("img");
+    if (imgElement) {
+      if (isTrackingEnabled) {
+        imgElement.style.transform = "scale(1.1)"; // Example of changing icon on tracking start
+      } else {
+        imgElement.style.transform = "scale(1)"; // Revert icon to original state on tracking stop
+      }
+    }
+  });
 
   const applySettingsButton = document.getElementById("applySettings");
   if (applySettingsButton) {
@@ -84,10 +136,11 @@ async function init() {
     const id = event?.floor.id;
     if (!id) return;
     floorSelector.value = id;
-    setCameraPosition(id); // Update the camera position when the floor changes
+    setCameraPosition(id);
   });
 
-  // Add each floor to the floor selector
+  
+
   mapData.getByType("floor").forEach((floor) => {
     const option = document.createElement("option");
     option.text = floor.name;
@@ -107,7 +160,6 @@ async function init() {
     });
   });
 
-  // Define a navigation state object
   let navigationState = {
     startSpace: null as Space | null,
     endSpace: null as Space | null,
@@ -116,57 +168,61 @@ async function init() {
 
   mapView.on("click", async (event) => {
     if (!event) return;
-
+  
     const clickedSpace = event.spaces[0];
     if (clickedSpace) {
-      // Check if the state of the space can be retrieved and then store the original color
-
       const state = mapView.getState(clickedSpace);
       const originalColor = state ? state.color : "#FFFFFF";
-
       originalColors.set(clickedSpace.id, originalColor);
-
+  
       mapView.updateState(clickedSpace, {
         color: "#d4b2df",
       });
     }
-
-    // Check if it's the first click for the start space
+  
+    const clickedSpaceName = clickedSpace ? clickedSpace.name : "";
+  
+    const startSearchInput = document.getElementById("start-search") as HTMLInputElement | null;
+    const endSearchInput = document.getElementById("end-search") as HTMLInputElement | null;
+  
     if (!navigationState.startSpace) {
-      navigationState.startSpace = event.spaces[0];
-    }
-    // Check if it's the second click for the end space
-    else if (
-      !navigationState.endSpace &&
-      event.spaces[0] !== navigationState.startSpace
-    ) {
-      navigationState.endSpace = event.spaces[0];
-
-      // Check and draw path if both start and end are set
+      navigationState.startSpace = clickedSpace;
+      localStorage.setItem("startSpaceId", clickedSpace.id);
+  
+      if (startSearchInput) {
+        startSearchInput.value = clickedSpaceName;
+      }
+  
+      updateUrlWithStartSpace(navigationState.startSpace.id);
+      console.log("Start space set:", navigationState.startSpace.id);
+    } else if (!navigationState.endSpace && clickedSpace !== navigationState.startSpace) {
+      navigationState.endSpace = clickedSpace;
+      localStorage.setItem("endSpaceId", clickedSpace.id);
+  
+      if (endSearchInput) {
+        endSearchInput.value = clickedSpaceName;
+      }
+  
+      updateUrlWithSelectedSpaces(navigationState.startSpace.id, navigationState.endSpace.id);
+  
       if (navigationState.startSpace && navigationState.endSpace) {
-        // Clear any previous paths if any
         if (navigationState.isPathDrawn) {
           mapView.Paths.removeAll();
           mapView.Markers.removeAll();
-          setSpaceInteractivity(true); // Make spaces interactive again
+          setSpaceInteractivity(true);
           navigationState.isPathDrawn = false;
         }
-
-        // Check if start and end spaces are on the same floor
-        const sameFloor =
-          navigationState.startSpace.floor === navigationState.endSpace.floor;
-
-        // Force accessibility if on the same floor to avoid stairs
-        const directionsOptions =
-          accessibilityEnabled || sameFloor ? { accessible: true } : {};
-
-        // Draw the path
+  
+        const sameFloor = navigationState.startSpace.floor === navigationState.endSpace.floor;
+  
+        const directionsOptions = accessibilityEnabled || sameFloor ? { accessible: true } : {};
+  
         const directions = await mapView.getDirections(
           navigationState.startSpace,
           navigationState.endSpace,
           directionsOptions
         );
-
+  
         if (directions) {
           mapView.Navigation.draw(directions, {
             pathOptions: {
@@ -174,12 +230,133 @@ async function init() {
               farRadius: 0.5,
             },
           });
-          navigationState.isPathDrawn = true; // Set flag indicating that a path is currently drawn
-          setSpaceInteractivity(false); // Disable interactivity while path is drawn
+          navigationState.isPathDrawn = true;
+          setSpaceInteractivity(false);
         }
       }
     }
   });
+  
+  function updateSearchBarWithStartSpace(spaceId: string): void {
+    // Find the space from the cached spaces
+    const space = cachedSpaces.find(space => space.id === spaceId);
+    
+    if (space) {
+      // Update the search bar with the name of the start space
+      const startSearchInput = document.getElementById("start-search") as HTMLInputElement | null;
+      if (startSearchInput) {
+        startSearchInput.value = space.name || '';
+      }
+    } else {
+      console.error("Space ID not found in cached spaces.");
+    }
+  }
+  function updateUrlWithStartSpace(startSpaceId: string): void {
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set("startSpace", startSpaceId);
+    window.history.pushState({}, '', currentUrl.toString());
+  }
+
+  const qrImgEl = document.getElementById("qr") as HTMLImageElement;
+  if (!qrImgEl) {
+    console.error("QR code image element not found");
+    return;
+  }
+
+  const qrUrl2 = predefinedStartSpaceId 
+      ? `https://hospital-w.vercel.app/?startSpace=${predefinedStartSpaceId}`
+      : `https://hospital-w.vercel.app/`;
+
+  generateQRCode(qrUrl2, qrImgEl);
+
+  function generateQRCode(url: string, qrImgEl: HTMLImageElement) {
+    QRCode.toDataURL(url, { type: 'image/jpeg', margin: 1 }, (err, dataUrl) => {
+      if (err) {
+        console.error("Failed to generate QR code:", err);
+      } else {
+        qrImgEl.src = dataUrl;
+      }
+    });
+  } 
+
+  // Check URL parameters on initialization
+  const urlParams = new URLSearchParams(window.location.search);
+  const startSpaceIdFromUrl = urlParams.get("startSpace");
+  
+  
+  const endSpaceIdFromUrl = urlParams.get("endSpace");
+
+  if (startSpaceIdFromUrl) {
+    const space = cachedSpaces.find(space => space.id === startSpaceIdFromUrl);
+    if (space) {
+      navigationState.startSpace = space;
+      localStorage.setItem("startSpaceId", startSpaceIdFromUrl);
+      mapView.updateState(space, { color: "#d4b2df" });
+      console.log("Start space set from URL:", startSpaceIdFromUrl);
+      updateSearchBarWithStartSpace(startSpaceIdFromUrl);
+    } else {
+      console.error("Start space ID from URL not found in cached spaces.");
+    }
+  } else {
+    // If no startSpaceId in URL, ensure no default space is set
+    console.log("No start space ID found in URL. Clearing default space if set.");
+    // Reset any default space selection if necessary
+  }
+
+  if (endSpaceIdFromUrl) {
+    const endSpace = cachedSpaces.find(space => space.id === endSpaceIdFromUrl);
+    if (endSpace) {
+      navigationState.endSpace = endSpace;
+      // Optionally, you could also handle the end space similarly
+    }
+  }
+  document.getElementById("qr")?.addEventListener("click", () => {
+    handleQRCodeScan(mapView); 
+  });
+  
+  // Function to update the URL with both start and end spaces
+  function updateUrlWithSelectedSpaces(startSpaceId: string, endSpaceId: string): void {
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set("startSpace", startSpaceId);
+    currentUrl.searchParams.set("endSpace", endSpaceId);
+    window.history.pushState({}, '', currentUrl.toString()); // Update URL without reloading
+  }
+  document.getElementById('stop-navigation')?.addEventListener('click', () => {
+    // Clear local storage
+    localStorage.removeItem('startSpaceId');
+    localStorage.removeItem('endSpaceId');
+    
+    // Verify removal
+    console.log('Local storage items:', {
+      startSpaceId: localStorage.getItem('startSpace'),
+      endSpaceId: localStorage.getItem('endSpace')
+    });
+    
+    // Update URL
+    const url = new URL(window.location.href);
+    url.searchParams.delete("startSpace");
+    url.searchParams.delete("endSpace");
+    window.history.replaceState({}, document.title, url.toString());
+    
+    // Reset the search bar
+    const startSearchInput = document.getElementById('start-search') as HTMLInputElement;
+    if (startSearchInput) {
+      startSearchInput.value = '';  // Clear the input value
+    }
+  
+    // Reset the navigation state
+    navigationState.startSpace = null;
+    navigationState.endSpace = null;
+    navigationState.isPathDrawn = false;
+    
+    // Clear paths and markers if needed
+    mapView.Paths.removeAll();
+    mapView.Markers.removeAll();
+    setSpaceInteractivity(true);
+    
+    console.log("Navigation stopped and URL cleared.");
+  });
+  
 
   function setSpaceInteractivity(isInteractive: boolean): void {
     mapData.getByType("space").forEach((space) => {
@@ -240,11 +417,32 @@ async function init() {
   //1)Add the stack "enable button":
   const stackMapButton = document.createElement("button");
   // Add any classes, text, or other properties (these two code can be linked to the css file):
-  stackMapButton.className = "reset-button mi-button";
-  stackMapButton.textContent = i18n.t("EnableStackMap");
+  stackMapButton.className = "stackmap-btn";
+  //stackMapButton.textContent = i18n.t("StackMap");
+
+  // 2. Create the icon element
+  const icon = document.createElement("i");
+  icon.className = "fa fa-cube"; // Font Awesome class for the book icon
+  icon.style.fontSize = "20px"; // Set the font size
+
+  // Append the icon to the button
+  stackMapButton.appendChild(icon);
 
   // Append the button to the desired parent element:
-  mappedinDiv.appendChild(stackMapButton);
+  //mappedinDiv.appendChild(stackMapButton);
+
+  // 2. Find the `.drop-menu.dropup` container
+  const dropMenuContainer = document.querySelector(".drop-menu.dropup");
+
+  // 3. Find the settings button
+  const settingsButton = document.querySelector(".drop-menu.dropup .settings-btn");
+
+  // 4. Append the stackMapButton to the container
+  if (dropMenuContainer) {
+    dropMenuContainer.insertBefore(stackMapButton, settingsButton);
+  } else {
+    console.error("The .drop-menu.dropup container was not found.");
+  }
 
   //Testing: no show floors:
   //Find the floor that need to do the Stack Map, at this case, we testing the Ground floor and Level 1
@@ -257,28 +455,31 @@ async function init() {
     );
 
   // The enable Button is used to enable and disable Stacked Maps.
+  // The enable Button is used to enable and disable Stacked Maps.
+  // The enable Button is used to enable and disable Stacked Maps.
   stackMapButton.onclick = () => {
-    //debug here:
-    console.log("Chekcing noShowFloor2", noShowFloor2);
-    //show the stack map here and hide the no used floor:
-    //at here noShowFloor2 is no need floor.
-    // Check the current state of the button text to determine the action
-    if (stackMapButton.textContent === i18n.t("EnableStackMap")) {
+    // Debug here:
+    console.log("Checking noShowFloor2", noShowFloor2);
+
+    // Toggle the 'active' class
+    if (stackMapButton.classList.contains("active")) {
+      // Collapse the stack map
+      mapView.collapse();
+      stackMapButton.classList.remove("active");
+      stackMapButton.style.backgroundColor = "#f9f9f9"; // Reset background color
+      setCameraPosition(mapView.currentFloor.id);
+    } else {
       // Show the stack map and hide the unused floor
       mapView.expand({ excludeFloors: noShowFloor2 });
-      stackMapButton.textContent = i18n.t("DisableStackMap");
+      stackMapButton.classList.add("active");
+      stackMapButton.style.backgroundColor = "#27b7ff"; // Set background color to yellow
 
       // Set the camera to zoomLevel 17 and pitch 0
       mapView.Camera.animateTo({
-        bearing: floorSettings[mapView.currentFloor.id].bearing, //178.5  // set the angle, e.g. North or South facing
-        zoomLevel: 18.7, // set the zoom level, better in 17-22
-        pitch: 85, // the angle from the top-down (0: Top-down, 90: Eye-level)
+        bearing: floorSettings[mapView.currentFloor.id].bearing, // Set the angle, e.g. North or South facing
+        zoomLevel: 18.7, // Set the zoom level, better in 17-22
+        pitch: 85, // The angle from the top-down (0: Top-down, 90: Eye-level)
       });
-    } else {
-      // Collapse the stack map
-      mapView.collapse();
-      stackMapButton.textContent = i18n.t("EnableStackMap");
-      setCameraPosition(mapView.currentFloor.id);
     }
   };
 
@@ -297,134 +498,124 @@ async function init() {
     .getByType("object")
     .find((object) => object.name.includes("exit04"));
 
-  //add an emergency square button here:
-  const emergencyButton = document.createElement("button");
-  emergencyButton.className = "reset-button mi-button";
-  emergencyButton.textContent = "Emergency Exit";
-  //emergencyButton.style.position = "absolute";
-  emergencyButton.style.bottom = "120px";
-  //emergencyButton.style.right = "10px";
-  emergencyButton.style.zIndex = "1000";
-  emergencyButton.style.padding = "10px";
-  emergencyButton.style.backgroundColor = "#FF0000"; //red bg color
-  emergencyButton.style.color = "#FFFFFF"; //white font color
-  //emergencyButton.style.border = "none";
-  //emergencyButton.style.borderRadius = "5px";
-  emergencyButton.style.cursor = "pointer";
-  emergencyButton.setAttribute("data-emergency-btn", "true");
-
-  // Append the button to the map container
-  mappedinDiv.appendChild(emergencyButton);
-
-  let emergencyExitOn = false;
-
-  emergencyButton.addEventListener("click", function () {
-    if (emergencyExitOn) {
-      // If the emergency exit is already on, turn it off
-      if (path) {
-        mapView.Paths.remove(path);
-        path = null;
-      }
-      emergencyButton.textContent = "Emergency Exit";
-      emergencyButton.style.backgroundColor = "#FF0000"; //red bg color
-      emergencyExitOn = false;
-    } else {
-      console.log("chekcing startSpace input:", startSpace);
-      console.log("exit01 space information:", exitSpace);
-
-      if (startSpace) {
+    //add an emergency square button here:
+    const emergencyButton = document.createElement("button");
+    emergencyButton.className = "reset-button mi-button";
+    emergencyButton.textContent = "Emergency Exit";
+  
+    emergencyButton.style.bottom = "55px";
+  
+    emergencyButton.style.zIndex = "1000";
+    emergencyButton.style.padding = "10px";
+    emergencyButton.style.backgroundColor = "#FF0000"; //red bg color
+    emergencyButton.style.color = "#FFFFFF"; //white font color
+    //emergencyButton.style.border = "none";
+    //emergencyButton.style.borderRadius = "5px";
+    emergencyButton.style.cursor = "pointer";
+    emergencyButton.setAttribute("data-emergency-btn", "true");
+  
+    // Append the button to the map container
+    mappedinDiv.appendChild(emergencyButton);
+  
+    let emergencyExitOn = false;
+  
+    emergencyButton.addEventListener("click", function () {
+      if (emergencyExitOn) {
+        // If the emergency exit is already on, turn it off
         if (path) {
           mapView.Paths.remove(path);
+          path = null;
         }
-        //create two distance for exit01 and exit02, will check the shortest way out later:
-        const directions = mapView.getDirections(startSpace, exitSpace!);
-        const directions2 = mapView.getDirections(startSpace, exitSpace2!);
-        const directions3 = mapView.getDirections(startSpace, exitSpace3!);
-        const directions4 = mapView.getDirections(startSpace, exitSpace4!);
-
-        //debug the distance here:
-        console.log("checking direcitions: ", directions?.distance);
-        console.log("checking direcitions2: ", directions2?.distance);
-        console.log("checking direcitions3: ", directions3?.distance);
-        console.log("checking direcitions4: ", directions4?.distance);
-
-        //checking the shortest wayout here:
-        let shortestWayout;
-        if (directions && directions2) {
-          shortestWayout =
-            directions.distance <= directions2.distance
-              ? directions
-              : directions2;
-        } else if (directions) {
-          shortestWayout = directions;
-        } else if (directions2) {
-          shortestWayout = directions2;
-        } else {
-          throw new Error("Both directions are undefined");
-        }
-
-        //checing the shortesWayout to the exit03 way:
-        //checking the second shortest wayout with exit03 here:
-        let shortestWayout2;
-        if (shortestWayout && directions3) {
-          shortestWayout2 =
-            shortestWayout.distance <= directions3.distance
-              ? shortestWayout
-              : directions3;
-        } else if (shortestWayout) {
-          shortestWayout2 = shortestWayout;
-        } else if (directions3) {
-          shortestWayout2 = directions3;
-        } else {
-          throw new Error("exit way is undefined");
-        }
-
-        //checing the shortesWayout2 to the exit04 way:
-        //checking the third shortest wayout with exit04 here:
-        let shortestWayout3;
-        if (shortestWayout2 && directions4) {
-          shortestWayout3 =
-            shortestWayout2.distance <= directions4.distance
-              ? shortestWayout2
-              : directions4;
-        } else if (shortestWayout2) {
-          shortestWayout3 = shortestWayout2;
-        } else if (directions4) {
-          shortestWayout3 = directions4;
-        } else {
-          throw new Error("exit way is undefined");
-        }
-
-        //build the shortest wayout here:
-        if (shortestWayout3) {
-          path = mapView.Paths.add(shortestWayout3.coordinates, {
-            nearRadius: 0.5,
-            farRadius: 0.5,
-            color: "red",
-          });
-          emergencyButton.textContent = "Emergency Off";
-          emergencyButton.style.backgroundColor = "#28a745";
-          emergencyExitOn = true;
-        }
+        emergencyButton.textContent = "Emergency Exit";
+        emergencyButton.style.backgroundColor = "#FF0000"; //red bg color
+        emergencyExitOn = false;
       } else {
-        // Show popup if startSpace is false
-        alert("Please select starting point.");
-        console.error("Please select start space locations.");
+        console.log("chekcing startSpace input:", startSpace);
+        console.log("exit01 space information:", exitSpace);
+  
+        if (startSpace) {
+          if (path) {
+            mapView.Paths.remove(path);
+          }
+          //create two distance for exit01 and exit02, will check the shortest way out later:
+          const directions = mapView.getDirections(startSpace, exitSpace!);
+          const directions2 = mapView.getDirections(startSpace, exitSpace2!);
+          const directions3 = mapView.getDirections(startSpace, exitSpace3!);
+          const directions4 = mapView.getDirections(startSpace, exitSpace4!);
+  
+          //debug the distance here:
+          console.log("checking direcitions: ", directions?.distance);
+          console.log("checking direcitions2: ", directions2?.distance);
+          console.log("checking direcitions3: ", directions3?.distance);
+          console.log("checking direcitions4: ", directions4?.distance);
+  
+          //checking the shortest wayout here:
+          let shortestWayout;
+          if (directions && directions2) {
+            shortestWayout =
+              directions.distance <= directions2.distance
+                ? directions
+                : directions2;
+          } else if (directions) {
+            shortestWayout = directions;
+          } else if (directions2) {
+            shortestWayout = directions2;
+          } else {
+            throw new Error("Both directions are undefined");
+          }
+  
+          //checing the shortesWayout to the exit03 way:
+          //checking the second shortest wayout with exit03 here:
+          let shortestWayout2;
+          if (shortestWayout && directions3) {
+            shortestWayout2 =
+              shortestWayout.distance <= directions3.distance
+                ? shortestWayout
+                : directions3;
+          } else if (shortestWayout) {
+            shortestWayout2 = shortestWayout;
+          } else if (directions3) {
+            shortestWayout2 = directions3;
+          } else {
+            throw new Error("exit way is undefined");
+          }
+  
+          //checing the shortesWayout2 to the exit04 way:
+          //checking the third shortest wayout with exit04 here:
+          let shortestWayout3;
+          if (shortestWayout2 && directions4) {
+            shortestWayout3 =
+              shortestWayout2.distance <= directions4.distance
+                ? shortestWayout2
+                : directions4;
+          } else if (shortestWayout2) {
+            shortestWayout3 = shortestWayout2;
+          } else if (directions4) {
+            shortestWayout3 = directions4;
+          } else {
+            throw new Error("exit way is undefined");
+          }
+  
+          //build the shortest wayout here:
+          if (shortestWayout3) {
+            path = mapView.Paths.add(shortestWayout3.coordinates, {
+              nearRadius: 0.5,
+              farRadius: 0.5,
+              color: "red",
+            });
+            emergencyButton.textContent = "Emergency Off";
+            emergencyButton.style.backgroundColor = "#28a745";
+            emergencyExitOn = true;
+          }
+        } else {
+          // Show popup if startSpace is false
+          alert("Please select starting point.");
+          console.error("Please select start space locations.");
+        }
       }
-    }
-  });
-
-  const allPOIs = mapData.getByType("point-of-interest");
-  const currentFloor = mapView.currentFloor.id;
-
-  // Filter POIs with same floor id
-  for (const poi of allPOIs) {
-    if (poi.floor.id == currentFloor) {
-      mapView.Labels.add(poi.coordinate, poi.name);
-    }
-  }
-
-  // Search bar functionality
+    });
+  
+    
   const endSearchBar = document.getElementById(
     "end-search"
   ) as HTMLInputElement;
@@ -571,7 +762,10 @@ async function init() {
     "get-directions"
   ) as HTMLButtonElement;
 
-  getDirectionsButton.addEventListener("click", async function () {
+   //Testing the direction button and stop navigation button text change function:
+   updateButtonText();
+
+ getDirectionsButton.addEventListener("click", async function () {
     console.log("Start Space:", startSpace);
     console.log("End Space:", endSpace);
     if (startSpace && endSpace) {
@@ -1014,24 +1208,17 @@ async function init() {
   //searchingBar Dropdown list function above.
 
   // Button Accessibility
-  const accessibilityButton = document.createElement("button");
-  accessibilityButton.innerHTML = `
-  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 512 512">
-    <path fill="currentColor" d="M192 96a48 48 0 1 0 0-96a48 48 0 1 0 0 96m-71.5 151.2c12.4-4.7 18.7-18.5 14-30.9s-18.5-18.7-30.9-14C43.1 225.1 0 283.5 0 352c0 88.4 71.6 160 160 160c61.2 0 114.3-34.3 141.2-84.7c6.2-11.7 1.8-26.2-9.9-32.5s-26.2-1.8-32.5 9.9C240 440 202.8 464 160 464c-61.9 0-112-50.1-112-112c0-47.9 30.1-88.8 72.5-104.8M259.8 176l-1.9-9.7c-4.5-22.3-24-38.3-46.8-38.3c-30.1 0-52.7 27.5-46.8 57l23.1 115.5c6 29.9 32.2 51.4 62.8 51.4h100.5c6.7 0 12.6 4.1 15 10.4l36.3 96.9c6 16.1 23.8 24.6 40.1 19.1l48-16c16.8-5.6 25.8-23.7 20.2-40.5s-23.7-25.8-40.5-20.2l-18.7 6.2l-25.5-68c-11.7-31.2-41.6-51.9-74.9-51.9h-68.5l-9.6-48H336c17.7 0 32-14.3 32-32s-14.3-32-32-32h-76.2z"/>
-  </svg>
-`;
-  accessibilityButton.style.position = "absolute";
-  accessibilityButton.style.top = "50px";
-  accessibilityButton.style.right = "10px";
-  accessibilityButton.style.zIndex = "1000";
-  accessibilityButton.style.backgroundColor = "#fff";
-  accessibilityButton.style.color = "#000";
-  accessibilityButton.style.border = "none";
-  accessibilityButton.style.padding = "10px";
-  accessibilityButton.style.cursor = "pointer";
-  accessibilityButton.style.borderRadius = "10px";
-
-  mappedinDiv.appendChild(accessibilityButton);
+   // Button Accessibility
+   const accessibilityButton = document.createElement("button");
+   accessibilityButton.innerHTML = `
+   <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 512 512">
+     <path fill="currentColor" d="M192 96a48 48 0 1 0 0-96a48 48 0 1 0 0 96m-71.5 151.2c12.4-4.7 18.7-18.5 14-30.9s-18.5-18.7-30.9-14C43.1 225.1 0 283.5 0 352c0 88.4 71.6 160 160 160c61.2 0 114.3-34.3 141.2-84.7c6.2-11.7 1.8-26.2-9.9-32.5s-26.2-1.8-32.5 9.9C240 440 202.8 464 160 464c-61.9 0-112-50.1-112-112c0-47.9 30.1-88.8 72.5-104.8M259.8 176l-1.9-9.7c-4.5-22.3-24-38.3-46.8-38.3c-30.1 0-52.7 27.5-46.8 57l23.1 115.5c6 29.9 32.2 51.4 62.8 51.4h100.5c6.7 0 12.6 4.1 15 10.4l36.3 96.9c6 16.1 23.8 24.6 40.1 19.1l48-16c16.8-5.6 25.8-23.7 20.2-40.5s-23.7-25.8-40.5-20.2l-18.7 6.2l-25.5-68c-11.7-31.2-41.6-51.9-74.9-51.9h-68.5l-9.6-48H336c17.7 0 32-14.3 32-32s-14.3-32-32-32h-76.2z"/>
+   </svg>
+ `;
+   accessibilityButton.id = "accessibility-btn";
+   
+ 
+   mappedinDiv.appendChild(accessibilityButton);
 
   const originalColors: Map<string, string> = new Map();
   let liftsHighlighted = false;
