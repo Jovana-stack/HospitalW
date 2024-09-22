@@ -237,7 +237,20 @@ async function init() {
     }
   });
   
-
+  function updateSearchBarWithStartSpace(spaceId: string): void {
+    // Find the space from the cached spaces
+    const space = cachedSpaces.find(space => space.id === spaceId);
+    
+    if (space) {
+      // Update the search bar with the name of the start space
+      const startSearchInput = document.getElementById("start-search") as HTMLInputElement | null;
+      if (startSearchInput) {
+        startSearchInput.value = space.name || '';
+      }
+    } else {
+      console.error("Space ID not found in cached spaces.");
+    }
+  }
   function updateUrlWithStartSpace(startSpaceId: string): void {
     const currentUrl = new URL(window.location.href);
     currentUrl.searchParams.set("startSpace", startSpaceId);
@@ -280,6 +293,7 @@ async function init() {
       localStorage.setItem("startSpaceId", startSpaceIdFromUrl);
       mapView.updateState(space, { color: "#d4b2df" });
       console.log("Start space set from URL:", startSpaceIdFromUrl);
+      updateSearchBarWithStartSpace(startSpaceIdFromUrl);
     } else {
       console.error("Start space ID from URL not found in cached spaces.");
     }
