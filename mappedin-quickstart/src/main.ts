@@ -11,6 +11,7 @@ import {
 import QRCode from 'qrcode';
 import "@mappedin/mappedin-js/lib/index.css";
 import i18n from "./i18n";
+import { handleQRCodeScan} from './qrCodeHandler';
 import { applySettings } from "./languageController";
 import { modeSwitcher } from "./modeController";
 import { fontSizesSwitcher } from "./fontSizeController";
@@ -295,7 +296,7 @@ async function init() {
       // Optionally, you could also handle the end space similarly
     }
   }
-
+  handleQRCodeScan(); 
   // Function to update the URL with both start and end spaces
   function updateUrlWithSelectedSpaces(startSpaceId: string, endSpaceId: string): void {
     const currentUrl = new URL(window.location.href);
