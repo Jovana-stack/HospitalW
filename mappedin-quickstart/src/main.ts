@@ -597,8 +597,7 @@ async function init() {
       }
     });
   
-    const allPOIs = mapData.getByType("point-of-interest");
-    const currentFloor = mapView.currentFloor.id;  // Search bar functionality
+    
   const endSearchBar = document.getElementById(
     "end-search"
   ) as HTMLInputElement;
