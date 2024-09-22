@@ -1,4 +1,4 @@
-import { 
+import {
   getMapData,
   show3dMap,
   MapView,
@@ -8,19 +8,19 @@ import {
   Coordinate,
   Floor,
 } from "@mappedin/mappedin-js";
-import QRCode from 'qrcode';
+import QRCode from "qrcode";
 import "@mappedin/mappedin-js/lib/index.css";
 import i18n from "./i18n";
-import { handleQRCodeScan} from './qrCodeHandler';
+import { handleQRCodeScan } from "./qrCodeHandler";
 import { applySettings } from "./languageController";
 import { modeSwitcher } from "./modeController";
 import { fontSizesSwitcher } from "./fontSizeController";
 import { languageSwitcher } from "./languageController";
-import { updateButtonText } from './buttonTextUpdater';  //update the Get Direction and Stop Nav button according to screen size
+import { updateButtonText } from "./buttonTextUpdater"; //update the Get Direction and Stop Nav button according to screen size
 import { initializeButtonListeners } from "./poiButtonController";
 import { RealTimeLocationTracker } from "./locationTracker";
 
-import './script';
+import "./script";
 
 const options = {
   key: "6666f9ba8de671000ba55c63",
@@ -32,7 +32,6 @@ let mapView: MapView;
 let mapData: MapData;
 let cachedSpaces: Space[];
 let locationTracker: RealTimeLocationTracker | null = null;
-
 
 // Space ID for start space
 const predefinedStartSpaceId = null; // Ensures no default start space is selected
@@ -139,8 +138,6 @@ async function init() {
     setCameraPosition(id);
   });
 
-  
-
   mapData.getByType("floor").forEach((floor) => {
     const option = document.createElement("option");
     option.text = floor.name;
@@ -168,43 +165,53 @@ async function init() {
 
   mapView.on("click", async (event) => {
     if (!event) return;
-  
+
     const clickedSpace = event.spaces[0];
     if (clickedSpace) {
       const state = mapView.getState(clickedSpace);
       const originalColor = state ? state.color : "#FFFFFF";
       originalColors.set(clickedSpace.id, originalColor);
-  
+
       mapView.updateState(clickedSpace, {
         color: "#d4b2df",
       });
     }
-  
+
     const clickedSpaceName = clickedSpace ? clickedSpace.name : "";
-  
-    const startSearchInput = document.getElementById("start-search") as HTMLInputElement | null;
-    const endSearchInput = document.getElementById("end-search") as HTMLInputElement | null;
-  
+
+    const startSearchInput = document.getElementById(
+      "start-search"
+    ) as HTMLInputElement | null;
+    const endSearchInput = document.getElementById(
+      "end-search"
+    ) as HTMLInputElement | null;
+
     if (!navigationState.startSpace) {
       navigationState.startSpace = clickedSpace;
       localStorage.setItem("startSpaceId", clickedSpace.id);
-  
+
       if (startSearchInput) {
         startSearchInput.value = clickedSpaceName;
       }
-  
+
       updateUrlWithStartSpace(navigationState.startSpace.id);
       console.log("Start space set:", navigationState.startSpace.id);
-    } else if (!navigationState.endSpace && clickedSpace !== navigationState.startSpace) {
+    } else if (
+      !navigationState.endSpace &&
+      clickedSpace !== navigationState.startSpace
+    ) {
       navigationState.endSpace = clickedSpace;
       localStorage.setItem("endSpaceId", clickedSpace.id);
-  
+
       if (endSearchInput) {
         endSearchInput.value = clickedSpaceName;
       }
-  
-      updateUrlWithSelectedSpaces(navigationState.startSpace.id, navigationState.endSpace.id);
-  
+
+      updateUrlWithSelectedSpaces(
+        navigationState.startSpace.id,
+        navigationState.endSpace.id
+      );
+
       if (navigationState.startSpace && navigationState.endSpace) {
         if (navigationState.isPathDrawn) {
           mapView.Paths.removeAll();
@@ -212,17 +219,19 @@ async function init() {
           setSpaceInteractivity(true);
           navigationState.isPathDrawn = false;
         }
-  
-        const sameFloor = navigationState.startSpace.floor === navigationState.endSpace.floor;
-  
-        const directionsOptions = accessibilityEnabled || sameFloor ? { accessible: true } : {};
-  
+
+        const sameFloor =
+          navigationState.startSpace.floor === navigationState.endSpace.floor;
+
+        const directionsOptions =
+          accessibilityEnabled || sameFloor ? { accessible: true } : {};
+
         const directions = await mapView.getDirections(
           navigationState.startSpace,
           navigationState.endSpace,
           directionsOptions
         );
-  
+
         if (directions) {
           mapView.Navigation.draw(directions, {
             pathOptions: {
@@ -236,16 +245,18 @@ async function init() {
       }
     }
   });
-  
+
   function updateSearchBarWithStartSpace(spaceId: string): void {
     // Find the space from the cached spaces
-    const space = cachedSpaces.find(space => space.id === spaceId);
-    
+    const space = cachedSpaces.find((space) => space.id === spaceId);
+
     if (space) {
       // Update the search bar with the name of the start space
-      const startSearchInput = document.getElementById("start-search") as HTMLInputElement | null;
+      const startSearchInput = document.getElementById(
+        "start-search"
+      ) as HTMLInputElement | null;
       if (startSearchInput) {
-        startSearchInput.value = space.name || '';
+        startSearchInput.value = space.name || "";
       }
     } else {
       console.error("Space ID not found in cached spaces.");
@@ -254,7 +265,7 @@ async function init() {
   function updateUrlWithStartSpace(startSpaceId: string): void {
     const currentUrl = new URL(window.location.href);
     currentUrl.searchParams.set("startSpace", startSpaceId);
-    window.history.pushState({}, '', currentUrl.toString());
+    window.history.pushState({}, "", currentUrl.toString());
   }
 
   const qrImgEl = document.getElementById("qr") as HTMLImageElement;
@@ -263,31 +274,32 @@ async function init() {
     return;
   }
 
-  const qrUrl2 = predefinedStartSpaceId 
-      ? `https://hospital-w.vercel.app/?startSpace=${predefinedStartSpaceId}`
-      : `https://hospital-w.vercel.app/`;
+  const qrUrl2 = predefinedStartSpaceId
+    ? `https://hospital-w.vercel.app/?startSpace=${predefinedStartSpaceId}`
+    : `https://hospital-w.vercel.app/`;
 
   generateQRCode(qrUrl2, qrImgEl);
 
   function generateQRCode(url: string, qrImgEl: HTMLImageElement) {
-    QRCode.toDataURL(url, { type: 'image/jpeg', margin: 1 }, (err, dataUrl) => {
+    QRCode.toDataURL(url, { type: "image/jpeg", margin: 1 }, (err, dataUrl) => {
       if (err) {
         console.error("Failed to generate QR code:", err);
       } else {
         qrImgEl.src = dataUrl;
       }
     });
-  } 
+  }
 
   // Check URL parameters on initialization
   const urlParams = new URLSearchParams(window.location.search);
   const startSpaceIdFromUrl = urlParams.get("startSpace");
-  
-  
+
   const endSpaceIdFromUrl = urlParams.get("endSpace");
 
   if (startSpaceIdFromUrl) {
-    const space = cachedSpaces.find(space => space.id === startSpaceIdFromUrl);
+    const space = cachedSpaces.find(
+      (space) => space.id === startSpaceIdFromUrl
+    );
     if (space) {
       navigationState.startSpace = space;
       localStorage.setItem("startSpaceId", startSpaceIdFromUrl);
@@ -299,64 +311,72 @@ async function init() {
     }
   } else {
     // If no startSpaceId in URL, ensure no default space is set
-    console.log("No start space ID found in URL. Clearing default space if set.");
+    console.log(
+      "No start space ID found in URL. Clearing default space if set."
+    );
     // Reset any default space selection if necessary
   }
 
   if (endSpaceIdFromUrl) {
-    const endSpace = cachedSpaces.find(space => space.id === endSpaceIdFromUrl);
+    const endSpace = cachedSpaces.find(
+      (space) => space.id === endSpaceIdFromUrl
+    );
     if (endSpace) {
       navigationState.endSpace = endSpace;
       // Optionally, you could also handle the end space similarly
     }
   }
   document.getElementById("qr")?.addEventListener("click", () => {
-    handleQRCodeScan(mapView); 
+    handleQRCodeScan(mapView);
   });
-  
+
   // Function to update the URL with both start and end spaces
-  function updateUrlWithSelectedSpaces(startSpaceId: string, endSpaceId: string): void {
+  function updateUrlWithSelectedSpaces(
+    startSpaceId: string,
+    endSpaceId: string
+  ): void {
     const currentUrl = new URL(window.location.href);
     currentUrl.searchParams.set("startSpace", startSpaceId);
     currentUrl.searchParams.set("endSpace", endSpaceId);
-    window.history.pushState({}, '', currentUrl.toString()); // Update URL without reloading
+    window.history.pushState({}, "", currentUrl.toString()); // Update URL without reloading
   }
-  document.getElementById('stop-navigation')?.addEventListener('click', () => {
+  document.getElementById("stop-navigation")?.addEventListener("click", () => {
     // Clear local storage
-    localStorage.removeItem('startSpaceId');
-    localStorage.removeItem('endSpaceId');
-    
+    localStorage.removeItem("startSpaceId");
+    localStorage.removeItem("endSpaceId");
+
     // Verify removal
-    console.log('Local storage items:', {
-      startSpaceId: localStorage.getItem('startSpace'),
-      endSpaceId: localStorage.getItem('endSpace')
+    console.log("Local storage items:", {
+      startSpaceId: localStorage.getItem("startSpace"),
+      endSpaceId: localStorage.getItem("endSpace"),
     });
-    
+
     // Update URL
     const url = new URL(window.location.href);
     url.searchParams.delete("startSpace");
     url.searchParams.delete("endSpace");
     window.history.replaceState({}, document.title, url.toString());
-    
+
     // Reset the search bar
-    const startSearchInput = document.getElementById('start-search') as HTMLInputElement;
+    const startSearchInput = document.getElementById(
+      "start-search"
+    ) as HTMLInputElement;
     if (startSearchInput) {
-      startSearchInput.value = '';  // Clear the input value
+      startSearchInput.value = ""; // Clear the input value
     }
-  
+
     // Reset the navigation state
     navigationState.startSpace = null;
     navigationState.endSpace = null;
     navigationState.isPathDrawn = false;
-    
+
     // Clear paths and markers if needed
     mapView.Paths.removeAll();
     mapView.Markers.removeAll();
     setSpaceInteractivity(true);
-    
+
     console.log("Navigation stopped and URL cleared.");
   });
-  
 
   function setSpaceInteractivity(isInteractive: boolean): void {
     mapData.getByType("space").forEach((space) => {
@@ -435,7 +455,9 @@ async function init() {
   const dropMenuContainer = document.querySelector(".drop-menu.dropup");
 
   // 3. Find the settings button
-  const settingsButton = document.querySelector(".drop-menu.dropup .settings-btn");
+  const settingsButton = document.querySelector(
+    ".drop-menu.dropup .settings-btn"
+  );
 
   // 4. Append the stackMapButton to the container
   if (dropMenuContainer) {
@@ -498,124 +520,123 @@ async function init() {
     .getByType("object")
     .find((object) => object.name.includes("exit04"));
 
-    //add an emergency square button here:
-    const emergencyButton = document.createElement("button");
-    emergencyButton.className = "reset-button mi-button";
-    emergencyButton.textContent = "Emergency Exit";
-  
-    emergencyButton.style.bottom = "55px";
-  
-    emergencyButton.style.zIndex = "1000";
-    emergencyButton.style.padding = "10px";
-    emergencyButton.style.backgroundColor = "#FF0000"; //red bg color
-    emergencyButton.style.color = "#FFFFFF"; //white font color
-    //emergencyButton.style.border = "none";
-    //emergencyButton.style.borderRadius = "5px";
-    emergencyButton.style.cursor = "pointer";
-    emergencyButton.setAttribute("data-emergency-btn", "true");
-  
-    // Append the button to the map container
-    mappedinDiv.appendChild(emergencyButton);
-  
-    let emergencyExitOn = false;
-  
-    emergencyButton.addEventListener("click", function () {
-      if (emergencyExitOn) {
-        // If the emergency exit is already on, turn it off
+  //add an emergency square button here:
+  const emergencyButton = document.createElement("button");
+  emergencyButton.className = "reset-button mi-button";
+  emergencyButton.textContent = "Emergency Exit";
+
+  emergencyButton.style.bottom = "55px";
+
+  emergencyButton.style.zIndex = "1000";
+  emergencyButton.style.padding = "10px";
+  emergencyButton.style.backgroundColor = "#FF0000"; //red bg color
+  emergencyButton.style.color = "#FFFFFF"; //white font color
+  //emergencyButton.style.border = "none";
+  //emergencyButton.style.borderRadius = "5px";
+  emergencyButton.style.cursor = "pointer";
+  emergencyButton.setAttribute("data-emergency-btn", "true");
+
+  // Append the button to the map container
+  mappedinDiv.appendChild(emergencyButton);
+
+  let emergencyExitOn = false;
+
+  emergencyButton.addEventListener("click", function () {
+    if (emergencyExitOn) {
+      // If the emergency exit is already on, turn it off
+      if (path) {
+        mapView.Paths.remove(path);
+        path = null;
+      }
+      emergencyButton.textContent = "Emergency Exit";
+      emergencyButton.style.backgroundColor = "#FF0000"; //red bg color
+      emergencyExitOn = false;
+    } else {
+      console.log("chekcing startSpace input:", startSpace);
+      console.log("exit01 space information:", exitSpace);
+
+      if (startSpace) {
         if (path) {
           mapView.Paths.remove(path);
-          path = null;
         }
-        emergencyButton.textContent = "Emergency Exit";
-        emergencyButton.style.backgroundColor = "#FF0000"; //red bg color
-        emergencyExitOn = false;
-      } else {
-        console.log("chekcing startSpace input:", startSpace);
-        console.log("exit01 space information:", exitSpace);
-  
-        if (startSpace) {
-          if (path) {
-            mapView.Paths.remove(path);
-          }
-          //create two distance for exit01 and exit02, will check the shortest way out later:
-          const directions = mapView.getDirections(startSpace, exitSpace!);
-          const directions2 = mapView.getDirections(startSpace, exitSpace2!);
-          const directions3 = mapView.getDirections(startSpace, exitSpace3!);
-          const directions4 = mapView.getDirections(startSpace, exitSpace4!);
-  
-          //debug the distance here:
-          console.log("checking direcitions: ", directions?.distance);
-          console.log("checking direcitions2: ", directions2?.distance);
-          console.log("checking direcitions3: ", directions3?.distance);
-          console.log("checking direcitions4: ", directions4?.distance);
-  
-          //checking the shortest wayout here:
-          let shortestWayout;
-          if (directions && directions2) {
-            shortestWayout =
-              directions.distance <= directions2.distance
-                ? directions
-                : directions2;
-          } else if (directions) {
-            shortestWayout = directions;
-          } else if (directions2) {
-            shortestWayout = directions2;
-          } else {
-            throw new Error("Both directions are undefined");
-          }
-  
-          //checing the shortesWayout to the exit03 way:
-          //checking the second shortest wayout with exit03 here:
-          let shortestWayout2;
-          if (shortestWayout && directions3) {
-            shortestWayout2 =
-              shortestWayout.distance <= directions3.distance
-                ? shortestWayout
-                : directions3;
-          } else if (shortestWayout) {
-            shortestWayout2 = shortestWayout;
-          } else if (directions3) {
-            shortestWayout2 = directions3;
-          } else {
-            throw new Error("exit way is undefined");
-          }
-  
-          //checing the shortesWayout2 to the exit04 way:
-          //checking the third shortest wayout with exit04 here:
-          let shortestWayout3;
-          if (shortestWayout2 && directions4) {
-            shortestWayout3 =
-              shortestWayout2.distance <= directions4.distance
-                ? shortestWayout2
-                : directions4;
-          } else if (shortestWayout2) {
-            shortestWayout3 = shortestWayout2;
-          } else if (directions4) {
-            shortestWayout3 = directions4;
-          } else {
-            throw new Error("exit way is undefined");
-          }
-  
-          //build the shortest wayout here:
-          if (shortestWayout3) {
-            path = mapView.Paths.add(shortestWayout3.coordinates, {
-              nearRadius: 0.5,
-              farRadius: 0.5,
-              color: "red",
-            });
-            emergencyButton.textContent = "Emergency Off";
-            emergencyButton.style.backgroundColor = "#28a745";
-            emergencyExitOn = true;
-          }
+        //create two distance for exit01 and exit02, will check the shortest way out later:
+        const directions = mapView.getDirections(startSpace, exitSpace!);
+        const directions2 = mapView.getDirections(startSpace, exitSpace2!);
+        const directions3 = mapView.getDirections(startSpace, exitSpace3!);
+        const directions4 = mapView.getDirections(startSpace, exitSpace4!);
+
+        //debug the distance here:
+        console.log("checking direcitions: ", directions?.distance);
+        console.log("checking direcitions2: ", directions2?.distance);
+        console.log("checking direcitions3: ", directions3?.distance);
+        console.log("checking direcitions4: ", directions4?.distance);
+
+        //checking the shortest wayout here:
+        let shortestWayout;
+        if (directions && directions2) {
+          shortestWayout =
+            directions.distance <= directions2.distance
+              ? directions
+              : directions2;
+        } else if (directions) {
+          shortestWayout = directions;
+        } else if (directions2) {
+          shortestWayout = directions2;
         } else {
-          // Show popup if startSpace is false
-          alert("Please select starting point.");
-          console.error("Please select start space locations.");
+          throw new Error("Both directions are undefined");
         }
+
+        //checing the shortesWayout to the exit03 way:
+        //checking the second shortest wayout with exit03 here:
+        let shortestWayout2;
+        if (shortestWayout && directions3) {
+          shortestWayout2 =
+            shortestWayout.distance <= directions3.distance
+              ? shortestWayout
+              : directions3;
+        } else if (shortestWayout) {
+          shortestWayout2 = shortestWayout;
+        } else if (directions3) {
+          shortestWayout2 = directions3;
+        } else {
+          throw new Error("exit way is undefined");
+        }
+
+        //checing the shortesWayout2 to the exit04 way:
+        //checking the third shortest wayout with exit04 here:
+        let shortestWayout3;
+        if (shortestWayout2 && directions4) {
+          shortestWayout3 =
+            shortestWayout2.distance <= directions4.distance
+              ? shortestWayout2
+              : directions4;
+        } else if (shortestWayout2) {
+          shortestWayout3 = shortestWayout2;
+        } else if (directions4) {
+          shortestWayout3 = directions4;
+        } else {
+          throw new Error("exit way is undefined");
+        }
+
+        //build the shortest wayout here:
+        if (shortestWayout3) {
+          path = mapView.Paths.add(shortestWayout3.coordinates, {
+            nearRadius: 0.5,
+            farRadius: 0.5,
+            color: "red",
+          });
+          emergencyButton.textContent = "Emergency Off";
+          emergencyButton.style.backgroundColor = "#28a745";
+          emergencyExitOn = true;
+        }
+      } else {
+        // Show popup if startSpace is false
+        alert("Please select starting point.");
+        console.error("Please select start space locations.");
       }
-    });
-  
-    
+    }
+  });
+
   const endSearchBar = document.getElementById(
     "end-search"
   ) as HTMLInputElement;
@@ -722,24 +743,37 @@ async function init() {
 
   stopNavigationButton.addEventListener("click", function () {
     // loops through all spaces in the map
-    mapData.getByType("space").forEach((space) => {
-      // retrieves the original color from the map
-      const originalColor = originalColors.get(space.id);
+    // mapData.getByType("space").forEach((space) => {
+    //   const originalColor = originalColors.get(space.id) || "#eeece7";
 
-      // checks if an original color exists, then reset to the original color
-      if (originalColor) {
+    //   mapView.updateState(space, {
+    //     color: originalColor,
+    //   });
+    // });
+
+    // if (navigationState.isPathDrawn) {
+    //   mapView.Paths.removeAll();
+    //   mapView.Markers.removeAll();
+    //   setSpaceInteractivity(true); // Make spaces interactive again if needed
+    //   navigationState.isPathDrawn = false; // Reset the path drawn state
+    // }
+
+    mapData.getByType("space").forEach((space) => {
+      // Retrieve the current state of the space to check its color
+      const currentState = mapView.getState(space);
+      const currentColor = currentState ? currentState.color : null;
+
+      // Define the color you are looking for and the new color to apply
+      const targetColor = "#d4b2df";
+      const newColor = "#eeece7"; // This is the color you want to change to
+
+      // Check if the current color matches the target color
+      if (currentColor === targetColor) {
         mapView.updateState(space, {
-          color: originalColor,
+          color: newColor,
         });
       }
     });
-
-    if (navigationState.isPathDrawn) {
-      mapView.Paths.removeAll();
-      mapView.Markers.removeAll();
-      setSpaceInteractivity(true); // Make spaces interactive again if needed
-      navigationState.isPathDrawn = false; // Reset the path drawn state
-    }
 
     // Clears the search bar
     const startSearchBar = document.getElementById(
@@ -762,13 +796,13 @@ async function init() {
     "get-directions"
   ) as HTMLButtonElement;
 
-   //Testing the direction button and stop navigation button text change function:
-   updateButtonText();
+  //Testing the direction button and stop navigation button text change function:
+  updateButtonText();
 
- getDirectionsButton.addEventListener("click", async function () {
-    console.log("Start Space:", startSpace);
-    console.log("End Space:", endSpace);
-    if (startSpace && endSpace) {
+  getDirectionsButton.addEventListener("click", async function () {
+    console.log("Start Space:", navigationState.startSpace);
+    console.log("End Space:", navigationState.endSpace);
+    if (navigationState.startSpace && navigationState.endSpace) {
       console.log("Both spaces are selected");
       if (navigationState.isPathDrawn) {
         mapView.Paths.removeAll();
@@ -777,13 +811,18 @@ async function init() {
         setSpaceInteractivity(true); // Reset interactivity
       }
 
-      const areOnSameFloor = startSpace.floor === endSpace.floor;
-      console.log("Are on same floor:", areOnSameFloor);
+      const areOnSameFloor =
+        navigationState.startSpace.floor === navigationState.endSpace.floor;
+      console.log("Are on the same floor:", areOnSameFloor);
 
       try {
-        const directions = await mapView.getDirections(startSpace, endSpace, {
-          accessible: areOnSameFloor || accessibilityEnabled,
-        });
+        const directions = await mapView.getDirections(
+          navigationState.startSpace,
+          navigationState.endSpace,
+          {
+            accessible: areOnSameFloor || accessibilityEnabled,
+          }
+        );
         console.log("Directions:", directions);
 
         if (directions) {
@@ -797,6 +836,7 @@ async function init() {
           setSpaceInteractivity(false); // Disable further interaction
         }
       } catch (error) {
+        console.error("Error fetching directions:", error);
         alert("Error fetching directions: " + error);
       }
     } else {
@@ -955,16 +995,16 @@ async function init() {
               //console.log('startSpace updated:', startSpace);
               if (container === moduleItemsContainer) {
                 // Update startSpace with the Space instance
-                startSpace = spaceInstance;
+                navigationState.startSpace = spaceInstance;
                 startSearchBar.value = spaceOption.textContent!;
                 console.log("startSpace updated:", startSpace);
-                highlightSpace(startSpace);
+                highlightSpace(navigationState.startSpace);
               } else if (container === moduleItemsContainerEndPoint) {
                 // Update endSpace with the Space instance
-                endSpace = spaceInstance;
+                navigationState.endSpace = spaceInstance;
                 endSearchBar.value = spaceOption.textContent!;
                 console.log("endSpace updated:", endSpace);
-                highlightSpace(endSpace);
+                highlightSpace(navigationState.endSpace);
               }
             } else {
               console.error("Space not found for:", selectedSpaceName);
@@ -1130,12 +1170,12 @@ async function init() {
               //console.log('startSpace updated:', startSpace);
               if (container === entranceItemsContainer) {
                 // Update startSpace with the Space instance
-                startSpace = spaceInstance;
+                navigationState.startSpace = spaceInstance;
                 startSearchBar.value = spaceOption.textContent!;
                 console.log("startSpace updated:", startSpace);
               } else if (container === entranceItemsContainerEndPoint) {
                 // Update endSpace with the Space instance
-                endSpace = spaceInstance;
+                navigationState.endSpace = spaceInstance;
                 endSearchBar.value = spaceOption.textContent!;
                 console.log("endSpace updated:", endSpace);
               }
@@ -1188,9 +1228,9 @@ async function init() {
       .getByType("space")
       .find((space) => space.name.includes("Cafe"));
 
-    startSpace = cafeSpace!;
+    navigationState.startSpace = cafeSpace!;
     startSearchBar.value = "Cafe";
-    console.log("startSpace updated as Cafe:", startSpace);
+    console.log("startSpace updated as Cafe:", navigationState.startSpace);
   });
 
   cafeDropdownButtonEndPoint.addEventListener("click", () => {
@@ -1199,26 +1239,25 @@ async function init() {
       .getByType("space")
       .find((space) => space.name.includes("Cafe"));
 
-    endSpace = cafeSpace!;
+    navigationState.endSpace = cafeSpace!;
     endSearchBar.value = "Cafe";
-    console.log("endSpace updated as Cafe:", endSpace);
+    console.log("endSpace updated as Cafe:", navigationState.endSpace);
   });
 
   //////////////////////////////////////////
   //searchingBar Dropdown list function above.
 
   // Button Accessibility
-   // Button Accessibility
-   const accessibilityButton = document.createElement("button");
-   accessibilityButton.innerHTML = `
+  // Button Accessibility
+  const accessibilityButton = document.createElement("button");
+  accessibilityButton.innerHTML = `
    <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 512 512">
      <path fill="currentColor" d="M192 96a48 48 0 1 0 0-96a48 48 0 1 0 0 96m-71.5 151.2c12.4-4.7 18.7-18.5 14-30.9s-18.5-18.7-30.9-14C43.1 225.1 0 283.5 0 352c0 88.4 71.6 160 160 160c61.2 0 114.3-34.3 141.2-84.7c6.2-11.7 1.8-26.2-9.9-32.5s-26.2-1.8-32.5 9.9C240 440 202.8 464 160 464c-61.9 0-112-50.1-112-112c0-47.9 30.1-88.8 72.5-104.8M259.8 176l-1.9-9.7c-4.5-22.3-24-38.3-46.8-38.3c-30.1 0-52.7 27.5-46.8 57l23.1 115.5c6 29.9 32.2 51.4 62.8 51.4h100.5c6.7 0 12.6 4.1 15 10.4l36.3 96.9c6 16.1 23.8 24.6 40.1 19.1l48-16c16.8-5.6 25.8-23.7 20.2-40.5s-23.7-25.8-40.5-20.2l-18.7 6.2l-25.5-68c-11.7-31.2-41.6-51.9-74.9-51.9h-68.5l-9.6-48H336c17.7 0 32-14.3 32-32s-14.3-32-32-32h-76.2z"/>
    </svg>
  `;
-   accessibilityButton.id = "accessibility-btn";
-   
- 
-   mappedinDiv.appendChild(accessibilityButton);
+  accessibilityButton.id = "accessibility-btn";
+
+  mappedinDiv.appendChild(accessibilityButton);
 
   const originalColors: Map<string, string> = new Map();
   let liftsHighlighted = false;
