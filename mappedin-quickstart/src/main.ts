@@ -310,7 +310,10 @@ async function init() {
       // Optionally, you could also handle the end space similarly
     }
   }
-  handleQRCodeScan(); 
+  // When QR code scan happens, you should call this function
+document.getElementById("scan-qr-code-btn")?.addEventListener("click", () => {
+  handleQRCodeScan(mapView);  // Pass the mapView instance
+});
   // Function to update the URL with both start and end spaces
   function updateUrlWithSelectedSpaces(startSpaceId: string, endSpaceId: string): void {
     const currentUrl = new URL(window.location.href);

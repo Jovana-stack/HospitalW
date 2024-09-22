@@ -1,8 +1,6 @@
 import { Space } from "@mappedin/mappedin-js";
 
-// Define the predefined start space ID
-const predefinedStartSpaceId: string | null = null; // Set your default space ID if needed
-
+const predefinedStartSpaceId: string | null = null; // Default space ID if needed
 let cachedSpaces: Space[] = [];
 const navigationState = {
   startSpace: null as Space | null,
@@ -10,9 +8,9 @@ const navigationState = {
   isPathDrawn: false,
 };
 
-export function handleQRCodeScan(): void {
+export function handleQRCodeScan(mapView: any): void {
   if (predefinedStartSpaceId) {
-    // Ensure the spaceId is valid and find the corresponding space
+    // Find the corresponding space in cached spaces
     const space = cachedSpaces.find(space => space.id === predefinedStartSpaceId);
     
     if (space) {
@@ -20,6 +18,9 @@ export function handleQRCodeScan(): void {
       navigationState.startSpace = space;
       localStorage.setItem("startSpaceId", predefinedStartSpaceId);
       
+      // Switch to the correct floor
+      switchToFloor(mapView, space);
+
       // Update the search bar
       updateSearchBarWithStartSpace(predefinedStartSpaceId);
       
@@ -33,8 +34,23 @@ export function handleQRCodeScan(): void {
   }
 }
 
-export function setCachedSpaces(spaces: Space[]): void {
-  cachedSpaces = spaces;
+// Function to switch to the correct floor based on the space
+function switchToFloor(mapView: any, space: Space): void {
+  const targetFloorId = space.floor.id;
+
+  if (mapView.getFloor().id !== targetFloorId) {
+    mapView.switchFloor(targetFloorId)
+      .then(() => console.log(`Switched to floor with ID: ${targetFloorId}`))
+      .catch((error: unknown) => {
+        if (error instanceof Error) {
+          console.error("Error switching floor:", error.message);
+        } else {
+          console.error("Unknown error occurred while switching floor.");
+        }
+      });
+  } else {
+    console.log('Already on the correct floor.');
+  }
 }
 
 function updateSearchBarWithStartSpace(spaceId: string): void {
