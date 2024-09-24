@@ -302,31 +302,35 @@ async function init() {
     const space = cachedSpaces.find(space => space.id === startSpaceIdFromUrl);
   
     if (space) {
-      // Set the map to the correct floor
+      // 1. Update the search bar first
+      updateSearchBarWithStartSpace(space.id); // Show start space in the search bar
+  
+      // 2. Check if the loading spinner exists
+      const loadingSpinner = document.getElementById("loading-spinner");
+      if (loadingSpinner) {
+        loadingSpinner.style.display = "block"; // Show loading if spinner exists
+      }
+  
+      // 3. Change the floor asynchronously
       await mapView.setFloor(space.floor.id);
-
-      // Add a slight delay (optional)
-      setTimeout(() => {
-        // Now update UI, space states, etc.
-        updateSearchBarWithStartSpace(space.id);
-      }, 100); // Delay by 100ms
-      
   
-      // After setting the floor, update the navigation state and UI
-      navigationState.startSpace = space;
+      // 4. Hide the loading spinner once the floor is set (if it exists)
+      if (loadingSpinner) {
+        loadingSpinner.style.display = "none";
+      }
+  
+      // 5. Update the map and highlight the start space on the correct floor
+      mapView.updateState(space, { color: "#d4b2df" });
+  
+      // 6. Update the localStorage with the start space
       localStorage.setItem("startSpaceId", startSpaceIdFromUrl);
-  
-      // Update the search bar with the start space
-      updateSearchBarWithStartSpace(space.id); // Use space.id for the search bar
-  
-      // Highlight the start space on the map
-      mapView.updateState(space, { color: "#d4b2df" }); // Ensure it's highlighted
   
       console.log("Start space set from URL:", startSpaceIdFromUrl);
     } else {
       console.error("Start space ID from URL not found in cached spaces.");
     }
   }
+  
    else {
     console.log("No start space ID found in URL.");
   }
