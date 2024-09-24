@@ -297,51 +297,52 @@ async function init() {
   const startSpaceIdFromUrl = urlParams.get("startSpace");
   const endSpaceIdFromUrl = urlParams.get("endSpace");
  
-  
   // Handle setting the start space from URL
-  if (startSpaceIdFromUrl) {
-    const space = cachedSpaces.find(space => space.id === startSpaceIdFromUrl);
-  
-    if (space) {
-      // Set the start space first
-      navigationState.startSpace = space; // Set the start space
-      localStorage.setItem("startSpaceId", startSpaceIdFromUrl); // Update local storage
-  
-      // Highlight the start space on the map
-      mapView.updateState(space, { color: "#d4b2df" }); // Highlight the space
-  
-      // Update the search bar with the start space name
-      updateSearchBarWithStartSpace(space.id);
-  
-      // Show loading spinner if it exists
-      const loadingSpinner = document.getElementById("loading-spinner");
-      if (loadingSpinner) {
-        loadingSpinner.style.display = "block"; // Show loading
-      }
-  
-      // Change the floor asynchronously
-      await mapView.setFloor(space.floor.id);
-  
-      // Ensure spaces are interactive again
+if (startSpaceIdFromUrl) {
+  const space = cachedSpaces.find(space => space.id === startSpaceIdFromUrl);
+
+  if (space) {
+    // Set the start space first
+    navigationState.startSpace = space; // Set the start space
+    localStorage.setItem("startSpaceId", startSpaceIdFromUrl); // Update local storage
+
+    // Highlight the start space on the map
+    mapView.updateState(space, { color: "#d4b2df" }); // Highlight the space
+
+    // Update the search bar with the start space name
+    updateSearchBarWithStartSpace(space.id);
+
+    // Show loading spinner if it exists
+    const loadingSpinner = document.getElementById("loading-spinner");
+    if (loadingSpinner) {
+      loadingSpinner.style.display = "block"; // Show loading
+    }
+
+    // Change the floor asynchronously
+    await mapView.setFloor(space.floor.id);
+
+    // After changing the floor, reapply interactivity
+    setTimeout(() => {
       mapData.getByType("space").forEach((space) => {
         mapView.updateState(space, {
           interactive: true, // Make spaces interactive again
           hoverColor: "#BAE0F3",
         });
       });
-  
+
       // Hide the loading spinner after the floor change
       if (loadingSpinner) {
         loadingSpinner.style.display = "none";
       }
-  
-      console.log("Start space set from URL:", startSpaceIdFromUrl);
-    } else {
-      console.error("Start space ID from URL not found in cached spaces.");
-    }
+    }, 1000); // Adjust this timeout as needed (1 second delay)
+
+    console.log("Start space set from URL:", startSpaceIdFromUrl);
   } else {
-    console.log("No start space ID found in URL.");
+    console.error("Start space ID from URL not found in cached spaces.");
   }
+} else {
+  console.log("No start space ID found in URL.");
+}
 
   // Handle setting the end space from URL
   if (endSpaceIdFromUrl) {
