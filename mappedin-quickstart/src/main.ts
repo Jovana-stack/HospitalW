@@ -295,23 +295,25 @@ async function init() {
   const startSpaceIdFromUrl = urlParams.get("startSpace");
   const endSpaceIdFromUrl = urlParams.get("endSpace");
 
+  // Handle setting the start space from URL
   if (startSpaceIdFromUrl) {
     // Find the space in cached spaces
     const space = cachedSpaces.find(space => space.id === startSpaceIdFromUrl);
 
     if (space) {
-      // Update navigation state to set the start space
-      navigationState.startSpace = space;
-      localStorage.setItem("startSpaceId", startSpaceIdFromUrl);
-      
       // Set the map to the correct floor
       mapView.setFloor(space.floor.id); // Ensure you set to the correct floor
 
-      // Update the visual representation on the map
-      mapView.updateState(space, { color: "#d4b2df" });
+      // After setting the floor, update the navigation state and UI
+      navigationState.startSpace = space;
+      localStorage.setItem("startSpaceId", startSpaceIdFromUrl);
+      
+      // Set the selected space on the map (ensure it's highlighted)
+      mapView.updateState(space, { color: "#d4b2df" }); // Highlight the start space
 
-      // Update search bar with the start space
+      // Update the search bar with the start space
       updateSearchBarWithStartSpace(space.id); // Use space.id for the search bar
+
       console.log("Start space set from URL:", startSpaceIdFromUrl);
     } else {
       console.error("Start space ID from URL not found in cached spaces.");
@@ -321,6 +323,7 @@ async function init() {
     // Reset any default space selection if necessary
   }
 
+  // Handle setting the end space from URL
   if (endSpaceIdFromUrl) {
     const endSpace = cachedSpaces.find(space => space.id === endSpaceIdFromUrl);
     if (endSpace) {
