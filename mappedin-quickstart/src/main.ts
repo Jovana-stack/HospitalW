@@ -296,7 +296,8 @@ async function init() {
   const urlParams = new URLSearchParams(window.location.search);
   const startSpaceIdFromUrl = urlParams.get("startSpace");
   const endSpaceIdFromUrl = urlParams.get("endSpace");
-
+ 
+  
   // Handle setting the start space from URL
   if (startSpaceIdFromUrl) {
     const space = cachedSpaces.find(space => space.id === startSpaceIdFromUrl);
@@ -321,6 +322,14 @@ async function init() {
       // Change the floor asynchronously
       await mapView.setFloor(space.floor.id);
   
+      // Ensure spaces are interactive again
+      mapData.getByType("space").forEach((space) => {
+        mapView.updateState(space, {
+          interactive: true, // Make spaces interactive again
+          hoverColor: "#BAE0F3",
+        });
+      });
+  
       // Hide the loading spinner after the floor change
       if (loadingSpinner) {
         loadingSpinner.style.display = "none";
@@ -330,8 +339,7 @@ async function init() {
     } else {
       console.error("Start space ID from URL not found in cached spaces.");
     }
-  }
-   else {
+  } else {
     console.log("No start space ID found in URL.");
   }
 
