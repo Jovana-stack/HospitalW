@@ -303,7 +303,14 @@ async function init() {
   
     if (space) {
       // Set the map to the correct floor
-      await mapView.setFloor(space.floor.id); // Ensure you await the floor change
+      await mapView.setFloor(space.floor.id);
+
+      // Add a slight delay (optional)
+      setTimeout(() => {
+        // Now update UI, space states, etc.
+        updateSearchBarWithStartSpace(space.id);
+      }, 100); // Delay by 100ms
+      
   
       // After setting the floor, update the navigation state and UI
       navigationState.startSpace = space;
