@@ -302,6 +302,13 @@ async function init() {
     const space = cachedSpaces.find(space => space.id === startSpaceIdFromUrl);
   
     if (space) {
+      // Set the start space first
+      navigationState.startSpace = space; // Set the start space
+      localStorage.setItem("startSpaceId", startSpaceIdFromUrl); // Update local storage
+  
+      // Highlight the start space on the map
+      mapView.updateState(space, { color: "#d4b2df" }); // Highlight the space
+  
       // Update the search bar with the start space name
       updateSearchBarWithStartSpace(space.id);
   
@@ -318,13 +325,6 @@ async function init() {
       if (loadingSpinner) {
         loadingSpinner.style.display = "none";
       }
-  
-      // Set the start space and highlight it
-      navigationState.startSpace = space; // Set the start space
-      localStorage.setItem("startSpaceId", startSpaceIdFromUrl); // Update local storage
-  
-      // Highlight the start space on the map
-      mapView.updateState(space, { color: "#d4b2df" }); // Highlight the space
   
       console.log("Start space set from URL:", startSpaceIdFromUrl);
     } else {
