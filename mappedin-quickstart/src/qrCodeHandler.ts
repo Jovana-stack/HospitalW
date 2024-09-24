@@ -1,7 +1,9 @@
-import { Space } from "@mappedin/mappedin-js";
+import { Space, MapView } from "@mappedin/mappedin-js";
 
-const predefinedStartSpaceId: string | null = null; // Default space ID if needed
-let cachedSpaces: Space[] = [];  // Ensure this is initialized properly when map data is loaded
+const predefinedStartSpaceId: string | null = null; // Use your predefined space ID if needed
+
+let cachedSpaces: Space[] = [];
+let mapView: MapView | null = null;
 
 const navigationState = {
   startSpace: null as Space | null,
@@ -9,64 +11,50 @@ const navigationState = {
   isPathDrawn: false,
 };
 
-export function handleQRCodeScan(mapView: any): void {
-  if (!predefinedStartSpaceId) {
-    console.error("No predefined start space ID set.");
-    return;
-  }
-
-  // Find the corresponding space in cached spaces
-  const space = cachedSpaces.find(space => space.id === predefinedStartSpaceId);
-  
-  if (!space) {
-    console.error("Predefined space ID not found in cached spaces.");
-    return;
-  }
-
-  // Update navigation state and local storage
-  navigationState.startSpace = space;
-  localStorage.setItem("startSpaceId", predefinedStartSpaceId);
-
-  // Switch to the correct floor
-  switchToFloor(mapView, space);
-
-  // Update the search bar
-  updateSearchBarWithStartSpace(predefinedStartSpaceId);
-
-  // Optionally update the URL or other UI elements
-  updateUrlWithStartSpace(predefinedStartSpaceId);
+export function setCachedSpaces(spaces: Space[]): void {
+  cachedSpaces = spaces;
 }
 
-// Function to switch to the correct floor based on the space
-function switchToFloor(mapView: any, space: Space): void {
-  const targetFloorId = space.floor.id;
+export function setMapView(view: MapView): void {
+  mapView = view;
+}
 
-  if (mapView.getFloor().id === targetFloorId) {
-    console.log('Already on the correct floor.');
-    return;
+export async function handleQRCodeScan(): Promise<void> {
+  if (predefinedStartSpaceId) {
+    const space = cachedSpaces.find(space => space.id === predefinedStartSpaceId);
+    
+    if (space && mapView) {
+      // Switch to the correct floor before setting the start space
+      await mapView.setFloor(space.floor.id);
+
+      // After switching to the correct floor, set the start space and update UI
+      navigationState.startSpace = space;
+      localStorage.setItem("startSpaceId", predefinedStartSpaceId);
+
+      updateSearchBarWithStartSpace(predefinedStartSpaceId);
+      updateUrlWithStartSpace(predefinedStartSpaceId);
+
+      // Optionally, highlight the space on the map
+      mapView.updateState(space, { color: "#d4b2df" });
+      
+      console.log("Start space set from QR code:", predefinedStartSpaceId);
+    } else {
+      console.error("Predefined space ID not found in cached spaces or mapView is null.");
+    }
+  } else {
+    console.error("No predefined start space ID set.");
   }
-
-  mapView.switchFloor(targetFloorId)
-    .then(() => console.log(`Switched to floor with ID: ${targetFloorId}`))
-    .catch((error: unknown) => {
-      if (error instanceof Error) {
-        console.error("Error switching floor:", error.message);
-      } else {
-        console.error("Unknown error occurred while switching floor.");
-      }
-    });
 }
 
 function updateSearchBarWithStartSpace(spaceId: string): void {
   const space = cachedSpaces.find(space => space.id === spaceId);
-  if (!space) {
+  if (space) {
+    const startSearchInput = document.getElementById("start-search") as HTMLInputElement | null;
+    if (startSearchInput) {
+      startSearchInput.value = space.name || '';
+    }
+  } else {
     console.error("Space ID not found in cached spaces.");
-    return;
-  }
-
-  const startSearchInput = document.getElementById("start-search") as HTMLInputElement | null;
-  if (startSearchInput) {
-    startSearchInput.value = space.name || '';
   }
 }
 

@@ -11,7 +11,7 @@ import {
 import QRCode from "qrcode";
 import "@mappedin/mappedin-js/lib/index.css";
 import i18n from "./i18n";
-import { handleQRCodeScan } from "./qrCodeHandler";
+import { handleQRCodeScan, setCachedSpaces } from "./qrCodeHandler";
 import { applySettings } from "./languageController";
 import { modeSwitcher } from "./modeController";
 import { fontSizesSwitcher } from "./fontSizeController";
@@ -42,7 +42,8 @@ async function init() {
 
   mapData = await getMapData(options);
   cachedSpaces = mapData.getByType("space") as Space[];
-
+  setCachedSpaces(cachedSpaces);
+  
   // Log cached spaces to verify
   console.log("Cached spaces:", cachedSpaces);
 
@@ -80,6 +81,7 @@ async function init() {
   initializeButtonListeners();
   // Initial labeling and translation
   applySettings(mapView, cachedSpaces);
+  handleQRCodeScan();
 
   // get toggle button element for real-time tracking
   const locationToggle = document.getElementById(
@@ -298,26 +300,27 @@ async function init() {
   // Handle setting the start space from URL
   if (startSpaceIdFromUrl) {
     const space = cachedSpaces.find(space => space.id === startSpaceIdFromUrl);
-
+  
     if (space) {
       // Set the map to the correct floor
       await mapView.setFloor(space.floor.id); // Ensure you await the floor change
-
+  
       // After setting the floor, update the navigation state and UI
       navigationState.startSpace = space;
       localStorage.setItem("startSpaceId", startSpaceIdFromUrl);
-
+  
       // Update the search bar with the start space
       updateSearchBarWithStartSpace(space.id); // Use space.id for the search bar
-      
+  
       // Highlight the start space on the map
       mapView.updateState(space, { color: "#d4b2df" }); // Ensure it's highlighted
-      
+  
       console.log("Start space set from URL:", startSpaceIdFromUrl);
     } else {
       console.error("Start space ID from URL not found in cached spaces.");
     }
-  } else {
+  }
+   else {
     console.log("No start space ID found in URL.");
   }
 
@@ -334,7 +337,7 @@ async function init() {
 
   
   document.getElementById("qr")?.addEventListener("click", () => {
-    handleQRCodeScan(mapView);
+    handleQRCodeScan();
   });
 
   // Function to update the URL with both start and end spaces
