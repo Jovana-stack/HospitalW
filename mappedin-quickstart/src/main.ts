@@ -325,7 +325,7 @@ async function init() {
     }
   }
   document.getElementById("qr")?.addEventListener("click", () => {
-    handleQRCodeScan();
+    handleQRCodeScan(mapView);
   });
 
   // Function to update the URL with both start and end spaces
@@ -1241,8 +1241,7 @@ async function init() {
     endSearchBar.value = "Cafe";
     console.log("endSpace updated as Cafe:", navigationState.endSpace);
   });
-// Define the TCollisionRankingTier type
-type TCollisionRankingTier = 'low' | 'medium' | 'high' | 'always-visible';
+
 
 // Define the toilets icon
 const toiletsIcon = `
