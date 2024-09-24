@@ -293,27 +293,33 @@ async function init() {
   // Check URL parameters on initialization
   const urlParams = new URLSearchParams(window.location.search);
   const startSpaceIdFromUrl = urlParams.get("startSpace");
-
   const endSpaceIdFromUrl = urlParams.get("endSpace");
 
   if (startSpaceIdFromUrl) {
-    const space = cachedSpaces.find((space) => space.id === startSpaceIdFromUrl);
+    const space = cachedSpaces.find(
+      (space) => space.id === startSpaceIdFromUrl
+    );
     if (space) {
-        navigationState.startSpace = space;
-        localStorage.setItem("startSpaceId", startSpaceIdFromUrl);
-
-        // Change the map view to the floor of the start space
-        const startSpaceFloorId = space.floor.id;
-        mapView.setFloor(startSpaceFloorId); // Set the floor to the one containing the start space
-        mapView.updateState(space, { color: "#d4b2df" });
-
-        console.log("Start space set from URL:", startSpaceIdFromUrl);
-        updateSearchBarWithStartSpace(startSpaceIdFromUrl);
+      // Set the map to the floor of the start space
+      mapView.setFloor(space.floor.id); // Set the correct floor
+      
+      // Update navigation state to set the start space
+      navigationState.startSpace = space; // Set as start space
+      localStorage.setItem("startSpaceId", startSpaceIdFromUrl);
+      
+      // Update the visual representation on the map
+      mapView.updateState(space, { color: "#d4b2df" });
+      
+      // Update search bar with the start space
+      updateSearchBarWithStartSpace(space.name); // Use space.name for display
+      console.log("Start space set from URL:", startSpaceIdFromUrl);
     } else {
-        console.error("Start space ID from URL not found in cached spaces.");
+      console.error("Start space ID from URL not found in cached spaces.");
     }
-}
-
+  } else {
+    console.log("No start space ID found in URL. Clearing default space if set.");
+    // Reset any default space selection if necessary
+  }
 
   if (endSpaceIdFromUrl) {
     const endSpace = cachedSpaces.find(
