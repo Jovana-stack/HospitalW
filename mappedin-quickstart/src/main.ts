@@ -296,22 +296,22 @@ async function init() {
   const endSpaceIdFromUrl = urlParams.get("endSpace");
 
   if (startSpaceIdFromUrl) {
-    const space = cachedSpaces.find(
-      (space) => space.id === startSpaceIdFromUrl
-    );
+    // Find the space in cached spaces
+    const space = cachedSpaces.find(space => space.id === startSpaceIdFromUrl);
+
     if (space) {
-      // Set the map to the floor of the start space
-      mapView.setFloor(space.floor.id); // Set the correct floor
-      
       // Update navigation state to set the start space
-      navigationState.startSpace = space; // Set as start space
+      navigationState.startSpace = space;
       localStorage.setItem("startSpaceId", startSpaceIdFromUrl);
       
+      // Set the map to the correct floor
+      mapView.setFloor(space.floor.id); // Ensure you set to the correct floor
+
       // Update the visual representation on the map
       mapView.updateState(space, { color: "#d4b2df" });
-      
+
       // Update search bar with the start space
-      updateSearchBarWithStartSpace(space.name); // Use space.name for display
+      updateSearchBarWithStartSpace(space.id); // Use space.id for the search bar
       console.log("Start space set from URL:", startSpaceIdFromUrl);
     } else {
       console.error("Start space ID from URL not found in cached spaces.");
@@ -322,9 +322,7 @@ async function init() {
   }
 
   if (endSpaceIdFromUrl) {
-    const endSpace = cachedSpaces.find(
-      (space) => space.id === endSpaceIdFromUrl
-    );
+    const endSpace = cachedSpaces.find(space => space.id === endSpaceIdFromUrl);
     if (endSpace) {
       navigationState.endSpace = endSpace;
       // Optionally, you could also handle the end space similarly
