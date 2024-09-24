@@ -297,25 +297,23 @@ async function init() {
   const endSpaceIdFromUrl = urlParams.get("endSpace");
 
   if (startSpaceIdFromUrl) {
-    const space = cachedSpaces.find(
-      (space) => space.id === startSpaceIdFromUrl
-    );
+    const space = cachedSpaces.find((space) => space.id === startSpaceIdFromUrl);
     if (space) {
-      navigationState.startSpace = space;
-      localStorage.setItem("startSpaceId", startSpaceIdFromUrl);
-      mapView.updateState(space, { color: "#d4b2df" });
-      console.log("Start space set from URL:", startSpaceIdFromUrl);
-      updateSearchBarWithStartSpace(startSpaceIdFromUrl);
+        navigationState.startSpace = space;
+        localStorage.setItem("startSpaceId", startSpaceIdFromUrl);
+
+        // Change the map view to the floor of the start space
+        const startSpaceFloorId = space.floor.id;
+        mapView.setFloor(startSpaceFloorId); // Set the floor to the one containing the start space
+        mapView.updateState(space, { color: "#d4b2df" });
+
+        console.log("Start space set from URL:", startSpaceIdFromUrl);
+        updateSearchBarWithStartSpace(startSpaceIdFromUrl);
     } else {
-      console.error("Start space ID from URL not found in cached spaces.");
+        console.error("Start space ID from URL not found in cached spaces.");
     }
-  } else {
-    // If no startSpaceId in URL, ensure no default space is set
-    console.log(
-      "No start space ID found in URL. Clearing default space if set."
-    );
-    // Reset any default space selection if necessary
-  }
+}
+
 
   if (endSpaceIdFromUrl) {
     const endSpace = cachedSpaces.find(
@@ -327,7 +325,7 @@ async function init() {
     }
   }
   document.getElementById("qr")?.addEventListener("click", () => {
-    handleQRCodeScan(mapView);
+    handleQRCodeScan();
   });
 
   // Function to update the URL with both start and end spaces
@@ -1243,6 +1241,73 @@ async function init() {
     endSearchBar.value = "Cafe";
     console.log("endSpace updated as Cafe:", navigationState.endSpace);
   });
+// Define the TCollisionRankingTier type
+type TCollisionRankingTier = 'low' | 'medium' | 'high' | 'always-visible';
+
+// Define the toilets icon
+const toiletsIcon = `
+<svg width="80" height="80" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g fill="black">
+    <!-- Female -->
+    <circle cx="16" cy="16" r="8" fill="pink" />
+    <path d="M16 26c-4.418 0-8 3.582-8 8v4h16v-4c0-4.418-3.582-8-8-8z" fill="pink" />
+    <path d="M10 34v10h12v-10H10z" fill="pink" />
+    
+    <!-- Male -->
+    <circle cx="48" cy="16" r="8" fill="lightblue" />
+    <path d="M48 26c-4.418 0-8 3.582-8 8v4h16v-4c0-4.418-3.582-8-8-8z" fill="lightblue" />
+    <path d="M42 34v10h12v-10H42z" fill="lightblue" />
+  </g>
+</svg>`;
+
+// Define the coffee mug icon
+const coffeeMugIcon = `
+<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none">
+    <path d="M6 22C5.44772 22 5 21.5523 5 21V19H19V21C19 21.5523 18.5523 22 18 22H6Z" fill="#8B4513"/>
+    <path d="M19 3H7C5.34315 3 4 4.34315 4 6V17H20V6C20 4.34315 18.6569 3 17 3H19Z" fill="#D3D3D3"/>
+    <path d="M6 17C6 18.1046 6.89543 19 8 19H16C17.1046 19 18 18.1046 18 17H6Z" fill="#A0522D"/>
+    <path d="M7 4C6.44772 4 6 4.44772 6 5V6H18V5C18 4.44772 17.5523 4 17 4H7Z" fill="#A0522D"/>
+</svg>`;
+
+// Fetch and label toilets spaces
+mapData.getByType("space").forEach(space => {
+    if (space.name && space.name.toLowerCase().includes("toilets")) {
+        mapView.Labels.add(space, space.name, {
+            rank: 'always-visible',
+            appearance: {
+                marker: {
+                    foregroundColor: {
+                        active: 'white',
+                        inactive: 'white',
+                    },
+                    icon: toiletsIcon,
+                },
+                text: {
+                    foregroundColor: '#063970',
+                },
+            },
+        });
+    }
+
+    if (space.name && space.name.toLowerCase() === "cafe") {
+        mapView.Labels.add(space, 'Café', {
+            rank: 'always-visible',
+            appearance: {
+                marker: {
+                    foregroundColor: {
+                        active: 'white',
+                        inactive: 'white',
+                    },
+                    icon: coffeeMugIcon,
+                },
+                text: {
+                    foregroundColor: '#063970',
+                },
+            },
+        });
+    }
+});
+
 
   //////////////////////////////////////////
   //searchingBar Dropdown list function above.
