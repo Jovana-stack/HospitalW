@@ -43,7 +43,7 @@ async function init() {
   mapData = await getMapData(options);
   cachedSpaces = mapData.getByType("space") as Space[];
   setCachedSpaces(cachedSpaces);
-  
+
   // Log cached spaces to verify
   console.log("Cached spaces:", cachedSpaces);
 
@@ -160,8 +160,6 @@ async function init() {
   });
 
   let navigationState = {
-    startSpace: null as Space | null,
-    endSpace: null as Space | null,
     isPathDrawn: false,
   };
 
@@ -188,33 +186,27 @@ async function init() {
       "end-search"
     ) as HTMLInputElement | null;
 
-    if (!navigationState.startSpace) {
-      navigationState.startSpace = clickedSpace;
+    if (!startSpace) {
+      startSpace = clickedSpace;
       localStorage.setItem("startSpaceId", clickedSpace.id);
 
       if (startSearchInput) {
         startSearchInput.value = clickedSpaceName;
       }
 
-      updateUrlWithStartSpace(navigationState.startSpace.id);
-      console.log("Start space set:", navigationState.startSpace.id);
-    } else if (
-      !navigationState.endSpace &&
-      clickedSpace !== navigationState.startSpace
-    ) {
-      navigationState.endSpace = clickedSpace;
+      updateUrlWithStartSpace(startSpace.id);
+      console.log("Start space set:", startSpace.id);
+    } else if (!endSpace && clickedSpace !== startSpace) {
+      endSpace = clickedSpace;
       localStorage.setItem("endSpaceId", clickedSpace.id);
 
       if (endSearchInput) {
         endSearchInput.value = clickedSpaceName;
       }
 
-      updateUrlWithSelectedSpaces(
-        navigationState.startSpace.id,
-        navigationState.endSpace.id
-      );
+      updateUrlWithSelectedSpaces(startSpace.id, endSpace.id);
 
-      if (navigationState.startSpace && navigationState.endSpace) {
+      if (startSpace && endSpace) {
         if (navigationState.isPathDrawn) {
           mapView.Paths.removeAll();
           mapView.Markers.removeAll();
@@ -222,15 +214,14 @@ async function init() {
           navigationState.isPathDrawn = false;
         }
 
-        const sameFloor =
-          navigationState.startSpace.floor === navigationState.endSpace.floor;
+        const sameFloor = startSpace.floor === endSpace.floor;
 
         const directionsOptions =
           accessibilityEnabled || sameFloor ? { accessible: true } : {};
 
         const directions = await mapView.getDirections(
-          navigationState.startSpace,
-          navigationState.endSpace,
+          startSpace,
+          endSpace,
           directionsOptions
         );
 
@@ -292,8 +283,6 @@ async function init() {
     });
   }
 
-
-  
   document.getElementById("qr")?.addEventListener("click", () => {
     handleQRCodeScan();
   });
@@ -334,8 +323,8 @@ async function init() {
     }
 
     // Reset the navigation state
-    navigationState.startSpace = null;
-    navigationState.endSpace = null;
+    startSpace = null;
+    endSpace = null;
     navigationState.isPathDrawn = false;
 
     // Clear paths and markers if needed
@@ -512,13 +501,43 @@ async function init() {
   emergencyButton.addEventListener("click", function () {
     if (emergencyExitOn) {
       // If the emergency exit is already on, turn it off
-      if (path) {
-        mapView.Paths.remove(path);
-        path = null;
-      }
+      mapView.Paths.removeAll();
+      mapView.Markers.removeAll();
+      path = null;
       emergencyButton.textContent = "Emergency Exit";
       emergencyButton.style.backgroundColor = "#FF0000"; //red bg color
       emergencyExitOn = false;
+
+      mapData.getByType("space").forEach((space) => {
+        const currentState = mapView.getState(space);
+        const currentColor = currentState ? currentState.color : null;
+  
+        const targetColor = "#d4b2df";
+        const newColor = "#eeece7";
+  
+        if (currentColor === targetColor) {
+          mapView.updateState(space, {
+            color: newColor,
+          });
+        }
+      });
+
+      setSpaceInteractivity(true);
+
+      const startSearchBar = document.getElementById(
+        "start-search"
+      ) as HTMLInputElement;
+      const endSearchBar = document.getElementById(
+        "end-search"
+      ) as HTMLInputElement;
+      if (startSearchBar) startSearchBar.value = "";
+      if (endSearchBar) endSearchBar.value = "";
+  
+      // Reset start and end spaces regardless of path state
+      startSpace = null;
+      endSpace = null;
+      startSpace = null;
+      endSpace = null;
     } else {
       console.log("chekcing startSpace input:", startSpace);
       console.log("exit01 space information:", exitSpace);
@@ -588,10 +607,12 @@ async function init() {
 
         //build the shortest wayout here:
         if (shortestWayout3) {
-          path = mapView.Paths.add(shortestWayout3.coordinates, {
-            nearRadius: 0.5,
-            farRadius: 0.5,
-            color: "red",
+          mapView.Navigation.draw(shortestWayout3, {
+            pathOptions: {
+              nearRadius: 0.5,  // Customize these as per your current map styling needs
+              farRadius: 0.5,
+              color: 'red',  // This sets the path color, adjust if necessary
+            }
           });
           emergencyButton.textContent = "Emergency Off";
           emergencyButton.style.backgroundColor = "#28a745";
@@ -710,21 +731,6 @@ async function init() {
   ) as HTMLButtonElement;
 
   stopNavigationButton.addEventListener("click", function () {
-    // loops through all spaces in the map
-    // mapData.getByType("space").forEach((space) => {
-    //   const originalColor = originalColors.get(space.id) || "#eeece7";
-
-    //   mapView.updateState(space, {
-    //     color: originalColor,
-    //   });
-    // });
-
-    // if (navigationState.isPathDrawn) {
-    //   mapView.Paths.removeAll();
-    //   mapView.Markers.removeAll();
-    //   setSpaceInteractivity(true); // Make spaces interactive again if needed
-    //   navigationState.isPathDrawn = false; // Reset the path drawn state
-    // }
 
     mapData.getByType("space").forEach((space) => {
       // Retrieve the current state of the space to check its color
@@ -733,7 +739,7 @@ async function init() {
 
       // Define the color you are looking for and the new color to apply
       const targetColor = "#d4b2df";
-      const newColor = "#eeece7"; // This is the color you want to change to
+      const newColor = "#eeece7";
 
       // Check if the current color matches the target color
       if (currentColor === targetColor) {
@@ -754,8 +760,8 @@ async function init() {
     if (endSearchBar) endSearchBar.value = "";
 
     // Reset start and end spaces regardless of path state
-    navigationState.startSpace = null;
-    navigationState.endSpace = null;
+    startSpace = null;
+    endSpace = null;
     startSpace = null;
     endSpace = null;
   });
@@ -768,9 +774,9 @@ async function init() {
   updateButtonText();
 
   getDirectionsButton.addEventListener("click", async function () {
-    console.log("Start Space:", navigationState.startSpace);
-    console.log("End Space:", navigationState.endSpace);
-    if (navigationState.startSpace && navigationState.endSpace) {
+    console.log("Start Space:", startSpace);
+    console.log("End Space:", endSpace);
+    if (startSpace && endSpace) {
       console.log("Both spaces are selected");
       if (navigationState.isPathDrawn) {
         mapView.Paths.removeAll();
@@ -780,13 +786,13 @@ async function init() {
       }
 
       const areOnSameFloor =
-        navigationState.startSpace.floor === navigationState.endSpace.floor;
+        startSpace.floor === endSpace.floor;
       console.log("Are on the same floor:", areOnSameFloor);
 
       try {
         const directions = await mapView.getDirections(
-          navigationState.startSpace,
-          navigationState.endSpace,
+          startSpace,
+          endSpace,
           {
             accessible: areOnSameFloor || accessibilityEnabled,
           }
@@ -963,16 +969,16 @@ async function init() {
               //console.log('startSpace updated:', startSpace);
               if (container === moduleItemsContainer) {
                 // Update startSpace with the Space instance
-                navigationState.startSpace = spaceInstance;
+                startSpace = spaceInstance;
                 startSearchBar.value = spaceOption.textContent!;
                 console.log("startSpace updated:", startSpace);
-                highlightSpace(navigationState.startSpace);
+                highlightSpace(startSpace);
               } else if (container === moduleItemsContainerEndPoint) {
                 // Update endSpace with the Space instance
-                navigationState.endSpace = spaceInstance;
+                endSpace = spaceInstance;
                 endSearchBar.value = spaceOption.textContent!;
                 console.log("endSpace updated:", endSpace);
-                highlightSpace(navigationState.endSpace);
+                highlightSpace(endSpace);
               }
             } else {
               console.error("Space not found for:", selectedSpaceName);
@@ -1138,12 +1144,12 @@ async function init() {
               //console.log('startSpace updated:', startSpace);
               if (container === entranceItemsContainer) {
                 // Update startSpace with the Space instance
-                navigationState.startSpace = spaceInstance;
+                startSpace = spaceInstance;
                 startSearchBar.value = spaceOption.textContent!;
                 console.log("startSpace updated:", startSpace);
               } else if (container === entranceItemsContainerEndPoint) {
                 // Update endSpace with the Space instance
-                navigationState.endSpace = spaceInstance;
+                endSpace = spaceInstance;
                 endSearchBar.value = spaceOption.textContent!;
                 console.log("endSpace updated:", endSpace);
               }
@@ -1196,9 +1202,9 @@ async function init() {
       .getByType("space")
       .find((space) => space.name.includes("Cafe"));
 
-    navigationState.startSpace = cafeSpace!;
+    startSpace = cafeSpace!;
     startSearchBar.value = "Cafe";
-    console.log("startSpace updated as Cafe:", navigationState.startSpace);
+    console.log("startSpace updated as Cafe:", startSpace);
   });
 
   cafeDropdownButtonEndPoint.addEventListener("click", () => {
@@ -1207,14 +1213,13 @@ async function init() {
       .getByType("space")
       .find((space) => space.name.includes("Cafe"));
 
-    navigationState.endSpace = cafeSpace!;
+    endSpace = cafeSpace!;
     endSearchBar.value = "Cafe";
-    console.log("endSpace updated as Cafe:", navigationState.endSpace);
+    console.log("endSpace updated as Cafe:", endSpace);
   });
 
-
-// Define the toilets icon
-const toiletsIcon = `
+  // Define the toilets icon
+  const toiletsIcon = `
 <svg width="80" height="80" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
   <g fill="black">
     <!-- Female -->
@@ -1229,8 +1234,8 @@ const toiletsIcon = `
   </g>
 </svg>`;
 
-// Define the coffee mug icon
-const coffeeMugIcon = `
+  // Define the coffee mug icon
+  const coffeeMugIcon = `
 <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none">
     <path d="M6 22C5.44772 22 5 21.5523 5 21V19H19V21C19 21.5523 18.5523 22 18 22H6Z" fill="#8B4513"/>
     <path d="M19 3H7C5.34315 3 4 4.34315 4 6V17H20V6C20 4.34315 18.6569 3 17 3H19Z" fill="#D3D3D3"/>
@@ -1238,45 +1243,44 @@ const coffeeMugIcon = `
     <path d="M7 4C6.44772 4 6 4.44772 6 5V6H18V5C18 4.44772 17.5523 4 17 4H7Z" fill="#A0522D"/>
 </svg>`;
 
-// Fetch and label toilets spaces
-mapData.getByType("space").forEach(space => {
+  // Fetch and label toilets spaces
+  mapData.getByType("space").forEach((space) => {
     if (space.name && space.name.toLowerCase().includes("toilets")) {
-        mapView.Labels.add(space, space.name, {
-            rank: 'always-visible',
-            appearance: {
-                marker: {
-                    foregroundColor: {
-                        active: 'white',
-                        inactive: 'white',
-                    },
-                    icon: toiletsIcon,
-                },
-                text: {
-                    foregroundColor: '#063970',
-                },
+      mapView.Labels.add(space, space.name, {
+        rank: "always-visible",
+        appearance: {
+          marker: {
+            foregroundColor: {
+              active: "white",
+              inactive: "white",
             },
-        });
+            icon: toiletsIcon,
+          },
+          text: {
+            foregroundColor: "#063970",
+          },
+        },
+      });
     }
 
     if (space.name && space.name.toLowerCase() === "cafe") {
-        mapView.Labels.add(space, 'Café', {
-            rank: 'always-visible',
-            appearance: {
-                marker: {
-                    foregroundColor: {
-                        active: 'white',
-                        inactive: 'white',
-                    },
-                    icon: coffeeMugIcon,
-                },
-                text: {
-                    foregroundColor: '#063970',
-                },
+      mapView.Labels.add(space, "Café", {
+        rank: "always-visible",
+        appearance: {
+          marker: {
+            foregroundColor: {
+              active: "white",
+              inactive: "white",
             },
-        });
+            icon: coffeeMugIcon,
+          },
+          text: {
+            foregroundColor: "#063970",
+          },
+        },
+      });
     }
-});
-
+  });
 
   //////////////////////////////////////////
   //searchingBar Dropdown list function above.
@@ -1443,68 +1447,70 @@ mapData.getByType("space").forEach(space => {
       receptionButton.style.color = "#000";
     }
   });
-   // Check URL parameters on initialization
-   const urlParams = new URLSearchParams(window.location.search);
-   const startSpaceIdFromUrl = urlParams.get("startSpace");
-   const endSpaceIdFromUrl = urlParams.get("endSpace");
-  
-   // Handle setting the start space from URL
- if (startSpaceIdFromUrl) {
-   const space = cachedSpaces.find(space => space.id === startSpaceIdFromUrl);
- 
-   if (space) {
-     // Set the start space first
-     navigationState.startSpace = space; // Set the start space
-     localStorage.setItem("startSpaceId", startSpaceIdFromUrl); // Update local storage
- 
-     // Highlight the start space on the map
-     mapView.updateState(space, { color: "#d4b2df" }); // Highlight the space
- 
-     // Update the search bar with the start space name
-     updateSearchBarWithStartSpace(space.id);
- 
-     // Show loading spinner if it exists
-     const loadingSpinner = document.getElementById("loading-spinner");
-     if (loadingSpinner) {
-       loadingSpinner.style.display = "block"; // Show loading
-     }
- 
-     // Change the floor asynchronously
-     await mapView.setFloor(space.floor.id);
- 
-     // After changing the floor, reapply interactivity
-     setTimeout(() => {
-       mapData.getByType("space").forEach((space) => {
-         mapView.updateState(space, {
-           interactive: true, // Make spaces interactive again
-           hoverColor: "#BAE0F3",
-         });
-       });
- 
-       // Hide the loading spinner after the floor change
-       if (loadingSpinner) {
-         loadingSpinner.style.display = "none";
-       }
-     }, 1000); // Adjust this timeout as needed (1 second delay)
- 
-     console.log("Start space set from URL:", startSpaceIdFromUrl);
-   } else {
-     console.error("Start space ID from URL not found in cached spaces.");
-   }
- } else {
-   console.log("No start space ID found in URL.");
- }
- 
-   // Handle setting the end space from URL
-   if (endSpaceIdFromUrl) {
-     const endSpace = cachedSpaces.find(space => space.id === endSpaceIdFromUrl);
-     if (endSpace) {
-       navigationState.endSpace = endSpace;
-       // Optionally, you could also handle the end space similarly
-     }
-   }
- 
- 
+  // Check URL parameters on initialization
+  const urlParams = new URLSearchParams(window.location.search);
+  const startSpaceIdFromUrl = urlParams.get("startSpace");
+  const endSpaceIdFromUrl = urlParams.get("endSpace");
+
+  // Handle setting the start space from URL
+  if (startSpaceIdFromUrl) {
+    const space = cachedSpaces.find(
+      (space) => space.id === startSpaceIdFromUrl
+    );
+
+    if (space) {
+      // Set the start space first
+      startSpace = space; // Set the start space
+      localStorage.setItem("startSpaceId", startSpaceIdFromUrl); // Update local storage
+
+      // Highlight the start space on the map
+      mapView.updateState(space, { color: "#d4b2df" }); // Highlight the space
+
+      // Update the search bar with the start space name
+      updateSearchBarWithStartSpace(space.id);
+
+      // Show loading spinner if it exists
+      const loadingSpinner = document.getElementById("loading-spinner");
+      if (loadingSpinner) {
+        loadingSpinner.style.display = "block"; // Show loading
+      }
+
+      // Change the floor asynchronously
+      await mapView.setFloor(space.floor.id);
+
+      // After changing the floor, reapply interactivity
+      setTimeout(() => {
+        mapData.getByType("space").forEach((space) => {
+          mapView.updateState(space, {
+            interactive: true, // Make spaces interactive again
+            hoverColor: "#BAE0F3",
+          });
+        });
+
+        // Hide the loading spinner after the floor change
+        if (loadingSpinner) {
+          loadingSpinner.style.display = "none";
+        }
+      }, 1000); // Adjust this timeout as needed (1 second delay)
+
+      console.log("Start space set from URL:", startSpaceIdFromUrl);
+    } else {
+      console.error("Start space ID from URL not found in cached spaces.");
+    }
+  } else {
+    console.log("No start space ID found in URL.");
+  }
+
+  // Handle setting the end space from URL
+
+  if (endSpaceIdFromUrl) {
+    const space = cachedSpaces.find((space) => space.id === endSpaceIdFromUrl);
+    if (space) {
+      endSpace = space;
+      const endSearchInput = document.getElementById("end-search") as HTMLInputElement;
+      if (endSearchInput) endSearchInput.value = space.name;
+    }
+  }
 }
 
 init();
