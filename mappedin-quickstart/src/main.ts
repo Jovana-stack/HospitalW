@@ -1465,7 +1465,8 @@ mapData.getByType("space").forEach(space => {
    if (space) {
      // Set the start space first
      navigationState.startSpace = space; // Set the start space
-     localStorage.setItem("startSpaceId", startSpaceIdFromUrl); // Update local storage
+     localStorage.setItem("startSpaceId", startSpaceIdFromUrl); 
+     setCameraPosition("startSpaceId");// Update local storage
  
      // Highlight the start space on the map
      mapView.updateState(space, { color: "#d4b2df" }); // Highlight the space
