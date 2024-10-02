@@ -1,6 +1,6 @@
 import { Space, MapView } from "@mappedin/mappedin-js";
 
-const predefinedStartSpaceId: string | null = null; // Keep this null initially
+const predefinedStartSpaceId: string | null = null; // Initially null, might change after QR scan
 
 let cachedSpaces: Space[] = [];
 let mapView: MapView | null = null;
@@ -16,7 +16,7 @@ export function setCachedSpaces(spaces: Space[]): void {
   cachedSpaces = spaces;
 }
 
-// Set the MapView instance
+// Set the MapView instance and check for URL parameters
 export function setMapView(view: MapView): void {
   mapView = view;
 
@@ -24,7 +24,8 @@ export function setMapView(view: MapView): void {
   const urlParams = new URLSearchParams(window.location.search);
   const startSpaceIdFromUrl = urlParams.get("startSpace");
 
-  if (startSpaceIdFromUrl && startSpaceIdFromUrl === "s_01606e647b37e1ee") {
+  if (startSpaceIdFromUrl === "s_01606e647b37e1ee") {
+    console.log("URL contains predefined start space ID. Focusing on it.");
     focusOnStartSpace(startSpaceIdFromUrl);
   }
 }
@@ -35,7 +36,7 @@ export async function handleQRCodeScan(): Promise<void> {
     const space = cachedSpaces.find(space => space.id === predefinedStartSpaceId);
 
     if (space && mapView) {
-      // Switch to the correct floor and set the start space
+      // Switch to the correct floor before setting the start space
       await mapView.setFloor(space.floor.id);
       navigationState.startSpace = space;
 
@@ -70,7 +71,7 @@ async function focusOnStartSpace(startSpaceId: string) {
         bearing: 20,
         pitch: 20,
         zoomLevel: 18,
-        center: space.center,
+        center: space.center, // Use the space's center for focusing
       },
       { duration: 2000, easing: 'ease-in-out' }
     );
