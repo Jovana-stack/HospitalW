@@ -353,7 +353,11 @@ async function init() {
       });
     });
   }
-
+// Act on the click event to focus on the Space that was clicked.
+mapView.on('click', async event => {
+	// Focus on the space that was clicked.
+	mapView.Camera.focusOn(event.spaces[0]);
+});
   // Mapping of floor IDs to their corresponding bearings and coordinates
   const floorSettings: {
     [key: string]: { bearing: number; coordinate: Coordinate };
