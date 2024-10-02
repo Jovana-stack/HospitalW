@@ -386,8 +386,12 @@ async function init() {
   const setCameraPosition = (floorId: string) => {
     const settings = floorSettings[floorId] || {
       bearing: 178.5,
-      coordinate: new Coordinate(0, 0),
+      coordinate: new Coordinate(-37.008153326778874,
+        174.88707769665865,),
+      zoomLevel:5,
+      
     };
+    
     mapView.Camera.animateTo(
       {
         bearing: settings.bearing,
