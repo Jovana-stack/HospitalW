@@ -158,11 +158,7 @@ async function init() {
       hoverColor: "#BAE0F3",
     });
   });
-// Act on the click event to focus on the Space that was clicked.
-mapView.on('click', async event => {
-	// Focus on the space that was clicked.
-	mapView.Camera.focusOn(event.spaces[0]);
-});
+
 
   let navigationState = {
     startSpace: null as Space | null,
@@ -405,6 +401,11 @@ mapView.on('click', async event => {
       mapView.Labels.add(poi.coordinate, poi.name);
     }
   }
+  // Act on the click event to focus on the Space that was clicked.
+  mapView.on("click", async (event) => {
+    // Focus on the space that was clicked.
+    mapView.Camera.focusOn(event.spaces[0]);
+  });
 
   //Add the Stack Map and testing:
   //1)Add the stack "enable button":
