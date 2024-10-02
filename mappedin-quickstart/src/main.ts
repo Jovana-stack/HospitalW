@@ -199,7 +199,12 @@ async function init() {
 
       updateUrlWithStartSpace(navigationState.startSpace.id);
       console.log("Start space set:", navigationState.startSpace.id);
-    } else if (
+  
+      // Only zoom if the start space has the specific ID
+      if (navigationState.startSpace.id === "s_01606e647b37e1ee") {
+        setCameraPosition(navigationState.startSpace.id); // Zoom to the start space
+      }
+    }  else if (
       !navigationState.endSpace &&
       clickedSpace !== navigationState.startSpace
     ) {
