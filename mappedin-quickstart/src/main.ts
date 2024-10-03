@@ -201,7 +201,7 @@ async function init() {
       console.log("Start space set:", navigationState.startSpace.id);
   
       // Only zoom if the start space has the specific ID
-      if (navigationState.startSpace.id === "s_01606e647b37e1ee") {
+      if (navigationState.startSpace.id === "s_197b07ea1bfd377b") {
         setCameraPosition(navigationState.startSpace.id); // Zoom to the start space
       }
     }  else if (
@@ -385,10 +385,10 @@ async function init() {
   // Set the camera position
   const setCameraPosition = (floorId: string) => {
     const settings = floorSettings[floorId] || {
-      bearing: 178.5,
-      coordinate: new Coordinate(-37.008153326778874,
-        174.88707769665865,),
-      zoomLevel:5,
+      bearing: 268,
+      coordinate: new Coordinate(
+        -37.00828194057011,174.8876360308928),
+      zoomLevel:9,
       
     };
     
@@ -1466,7 +1466,7 @@ mapData.getByType("space").forEach(space => {
      // Set the start space first
      navigationState.startSpace = space; // Set the start space
      localStorage.setItem("startSpaceId", startSpaceIdFromUrl); 
-     setCameraPosition("startSpaceId");// Update local storage
+     setCameraPosition(startSpaceIdFromUrl);// Update local storage
  
      // Highlight the start space on the map
      mapView.updateState(space, { color: "#d4b2df" }); // Highlight the space
