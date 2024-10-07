@@ -194,24 +194,28 @@ async function init() {
       localStorage.setItem("startSpaceId", clickedSpace.id);
 
       if (startSearchInput) {
-        startSearchInput.value = clickedSpaceName;
-      }
-
-      updateUrlWithStartSpace(navigationState.startSpace.id);
-      console.log("Start space set:", navigationState.startSpace.id);
-  
+        // Event listener for changes in the start search input
+        startSearchInput.addEventListener("input", (e) => {
+          const inputValue = (e.target as HTMLInputElement).value;
+          const matchingSpace = cachedSpaces.find((space) => space.name === inputValue);
+    
+          if (matchingSpace) {
+            updateUrlWithStartSpace(matchingSpace.id); // Update URL with the matching space ID
+            console.log("Updated URL with start space:", matchingSpace.id);
+          } else {
+            console.log("No matching space found for input:", inputValue);
+          }
+        });
+       
       // Only zoom if the start space has the specific ID
       if (navigationState.startSpace.id === "s_197b07ea1bfd377b" ||
          navigationState.startSpace.id === "s_01606e647b37e1ee" || 
          navigationState.startSpace.id === "s_f41d58efd52a8b37" ||
         navigationState.startSpace.id === "s_73df75ed7805517d" ||
         navigationState.startSpace.id === "s_e9cd037ed27ccb23" ||
-        navigationState.startSpace.id === "s_5a06fff93078718e" ) {
+        navigationState.startSpace.id === "s_f41d58efd52a8b37" ) {
         setCameraPosition(navigationState.startSpace.id); // Zoom to the start space
       }
-      else {
-  setCameraPosition(mapView.currentFloor.id); // Use the current floor's ID for camera positioning
-}
     }  else if (
       !navigationState.endSpace &&
       clickedSpace !== navigationState.startSpace
@@ -235,7 +239,7 @@ async function init() {
           setSpaceInteractivity(true);
           navigationState.isPathDrawn = false;
         }
-
+      }
         const sameFloor =
           navigationState.startSpace.floor === navigationState.endSpace.floor;
 
@@ -1471,11 +1475,21 @@ mapData.getByType("space").forEach(space => {
    const space = cachedSpaces.find(space => space.id === startSpaceIdFromUrl);
  
    if (space) {
-     // Set the start space first
-     navigationState.startSpace = space; // Set the start space
-     localStorage.setItem("startSpaceId", startSpaceIdFromUrl); 
-     /*setCameraPosition(startSpaceIdFromUrl);// Update local storage
- */
+    // Set the start space first
+    startSpace = space; // Set the start space
+    localStorage.setItem("startSpaceId", startSpaceIdFromUrl); // Update local storage
+    if (startSpaceIdFromUrl === "s_197b07ea1bfd377b" ||
+      startSpaceIdFromUrl === "s_01606e647b37e1ee" || 
+      startSpaceIdFromUrl === "s_f41d58efd52a8b37" ||
+      startSpaceIdFromUrl === "s_73df75ed7805517d" ||
+      startSpaceIdFromUrl === "s_e9cd037ed27ccb23" ||
+      startSpaceIdFromUrl === "s_5a06fff93078718e" ) {
+     setCameraPosition(startSpaceIdFromUrl);
+     } 
+      else {
+      setCameraPosition(mapView.currentFloor.id); // Use the current floor's ID for camera positioning
+      }
+ 
      // Highlight the start space on the map
      mapView.updateState(space, { color: "#d4b2df" }); // Highlight the space
  
