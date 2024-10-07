@@ -24,7 +24,7 @@ export function setMapView(view: MapView): void {
   const urlParams = new URLSearchParams(window.location.search);
   const startSpaceIdFromUrl = urlParams.get("startSpace");
 
-  if (startSpaceIdFromUrl === "s_01606e647b37e1ee") {
+  if (startSpaceIdFromUrl === "s_e9cd037ed27ccb23") {
     console.log("URL contains predefined start space ID. Focusing on it.");
     //focusOnStartSpace(startSpaceIdFromUrl);
   }
