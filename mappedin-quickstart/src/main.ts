@@ -1474,14 +1474,13 @@ mapData.getByType("space").forEach(space => {
      // Set the start space first
      navigationState.startSpace = space; // Set the start space
      localStorage.setItem("startSpaceId", startSpaceIdFromUrl); 
-     //setCameraPosition(startSpaceIdFromUrl);// Update local storage
- 
+     /*setCameraPosition(startSpaceIdFromUrl);// Update local storage
+ */
      // Highlight the start space on the map
      mapView.updateState(space, { color: "#d4b2df" }); // Highlight the space
  
      // Update the search bar with the start space name
      updateSearchBarWithStartSpace(space.id);
-     setCameraPosition(startSpaceIdFromUrl);
  
      // Show loading spinner if it exists
      const loadingSpinner = document.getElementById("loading-spinner");
