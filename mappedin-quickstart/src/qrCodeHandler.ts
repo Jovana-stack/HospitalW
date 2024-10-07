@@ -17,18 +17,18 @@ export function setCachedSpaces(spaces: Space[]): void {
 }
 
 // Set the MapView instance and check for URL parameters
-export function setMapView(view: MapView): void {
-  mapView = view;
+//export function setMapView(view: MapView): void {
+ // mapView = view;
 
   // Automatically check the URL for the start space ID and focus on it if it matches
   const urlParams = new URLSearchParams(window.location.search);
   const startSpaceIdFromUrl = urlParams.get("startSpace");
 
-  if (startSpaceIdFromUrl === "s_e9cd037ed27ccb23") {
+ /* if (startSpaceIdFromUrl === "s_e9cd037ed27ccb23") {
     console.log("URL contains predefined start space ID. Focusing on it.");
     //focusOnStartSpace(startSpaceIdFromUrl);
   }
-}
+}*/
 
 // Handle the QR code scan and set the start space
 export async function handleQRCodeScan(): Promise<void> {
