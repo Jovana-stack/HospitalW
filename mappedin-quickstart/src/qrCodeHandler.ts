@@ -26,7 +26,7 @@ export function setMapView(view: MapView): void {
 
   if (startSpaceIdFromUrl === "s_01606e647b37e1ee") {
     console.log("URL contains predefined start space ID. Focusing on it.");
-    focusOnStartSpace(startSpaceIdFromUrl);
+    //focusOnStartSpace(startSpaceIdFromUrl);
   }
 }
 
@@ -58,7 +58,7 @@ export async function handleQRCodeScan(): Promise<void> {
 }
 
 // Function to focus the camera on a given start space ID
-async function focusOnStartSpace(startSpaceId: string) {
+/*async function focusOnStartSpace(startSpaceId: string) {
   const space = cachedSpaces.find(space => space.id === startSpaceId);
 
   if (space && mapView) {
@@ -80,7 +80,7 @@ async function focusOnStartSpace(startSpaceId: string) {
   } else {
     console.error("Start space not found in cached spaces or mapView is null.");
   }
-}
+}*/
 
 // Update search bar with the start space name
 function updateSearchBarWithStartSpace(spaceId: string): void {

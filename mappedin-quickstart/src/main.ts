@@ -201,8 +201,16 @@ async function init() {
       console.log("Start space set:", navigationState.startSpace.id);
   
       // Only zoom if the start space has the specific ID
-      if (navigationState.startSpace.id === "s_197b07ea1bfd377b") {
+      if (navigationState.startSpace.id === "s_197b07ea1bfd377b" ||
+         navigationState.startSpace.id === "s_01606e647b37e1ee" || 
+         navigationState.startSpace.id === "s_f41d58efd52a8b37" ||
+        navigationState.startSpace.id === "s_73df75ed7805517d" ||
+        navigationState.startSpace.id === "s_e9cd037ed27ccb23" ||
+        navigationState.startSpace.id === "s_5a06fff93078718e" ) {
         setCameraPosition(navigationState.startSpace.id); // Zoom to the start space
+      }
+      else {
+        setCameraPosition(mapView.currentFloor.id); // Use the current floor's ID for camera positioning
       }
     }  else if (
       !navigationState.endSpace &&
@@ -385,10 +393,10 @@ async function init() {
   // Set the camera position
   const setCameraPosition = (floorId: string) => {
     const settings = floorSettings[floorId] || {
-      bearing: 268,
+      bearing: 230,
       coordinate: new Coordinate(
         -37.00828194057011,174.8876360308928),
-      zoomLevel:9,
+      zoomLevel:19,
       
     };
     
