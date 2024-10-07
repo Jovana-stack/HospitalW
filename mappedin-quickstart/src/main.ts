@@ -261,6 +261,39 @@ async function init() {
       }
     }
   });
+// Assuming this is the event when a space is selected from the search bar
+function onSpaceSelectedFromSearch(selectedSpaceId: string) {
+  const selectedSpace = cachedSpaces.find((space) => space.id === selectedSpaceId);
+  
+  if (!selectedSpace) {
+    console.error("Space not found in cached spaces:", selectedSpaceId);
+    return;
+  }
+
+  if (!navigationState.startSpace) {
+    navigationState.startSpace = selectedSpace;
+    setCameraPosition(selectedSpace.id);
+    updateUrlWithStartSpace(selectedSpace.id);
+  } else if (!navigationState.endSpace && selectedSpace !== navigationState.startSpace) {
+    navigationState.endSpace = selectedSpace;
+    updateUrlWithSelectedSpaces(navigationState.startSpace.id, navigationState.endSpace.id);
+    
+    // Now, proceed with drawing the path and handling the navigation state
+    drawPathBetweenSpaces(navigationState.startSpace, navigationState.endSpace);
+  }
+}
+
+// Example function to handle path drawing and space interactions
+async function drawPathBetweenSpaces(startSpace: Space, endSpace: Space) {
+  const directions = await mapView.getDirections(startSpace, endSpace, {
+    accessible: true, // Adjust options as needed
+  });
+  if (directions) {
+    mapView.Navigation.draw(directions);
+    navigationState.isPathDrawn = true;
+    setSpaceInteractivity(false);
+  }
+}
 
   function updateSearchBarWithStartSpace(spaceId: string): void {
     // Find the space from the cached spaces
